@@ -35,7 +35,10 @@ function DeadlineRow({ item }: { item: (typeof deadlines)[number] }) {
   return (
     <article className="deadline-row">
       <div className="date-tile"><strong>{item.date}</strong><span>{item.month}</span></div>
-      <div className="deadline-copy"><div className="flex flex-wrap items-center gap-2.5"><h3>{item.title}</h3><ModuleTag tone={item.tone}>{item.module}</ModuleTag></div><p>{item.meta}</p></div>
+      <div className="deadline-copy">
+        <div className="flex flex-wrap items-center gap-2.5"><h3>{item.title}</h3><ModuleTag tone={item.tone}>{item.module}</ModuleTag></div>
+        <p>{item.meta}</p>
+      </div>
       <div className="deadline-meta"><span>{item.weight} weighting</span><span className={`status status-${item.tone}`}><i />{item.status}</span></div>
       <button className="more-button" aria-label={`More options for ${item.title}`}>•••</button>
     </article>
@@ -49,27 +52,54 @@ function initials(user: User) {
 
 export function DashboardView({ user }: { user: User }) {
   const displayName = user.name?.trim() || "Student";
+
   return (
     <div className="min-h-screen">
       <header className="site-header">
         <div className="shell flex h-16 items-center justify-between">
           <a className="brand" href="/dashboard" aria-label="DueSoon home"><span className="brand-mark"><Icon name="clock" className="size-[18px]" /></span><span>DueSoon</span></a>
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation"><a className="nav-link nav-active" href="#overview"><Icon name="grid" />Overview</a><a className="nav-link" href="#deadlines"><Icon name="calendar" />Deadlines</a></nav>
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+            <a className="nav-link nav-active" href="#overview"><Icon name="grid" />Overview</a>
+            <a className="nav-link" href="#deadlines"><Icon name="calendar" />Deadlines</a>
+          </nav>
           <div className="flex items-center gap-3">
             <button className="add-button"><Icon name="plus" className="size-4" /><span>Add deadline</span></button>
-            <div className="account-area"><div className="account-copy"><strong>{displayName}</strong><form action={async () => { "use server"; await signOut({ redirectTo: "/sign-in" }); }}><button>Sign out</button></form></div><div className="avatar" aria-label={`${displayName}'s account`}>{initials(user)}</div></div>
+            <div className="account-area">
+              <div className="account-copy"><strong>{displayName}</strong><form action={async () => { "use server"; await signOut({ redirectTo: "/sign-in" }); }}><button>Sign out</button></form></div>
+              <div className="avatar" aria-label={`${displayName}'s account`}>{initials(user)}</div>
+            </div>
           </div>
         </div>
       </header>
 
       <main id="overview" className="shell py-8 sm:py-11">
-        <section className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="eyebrow">Spring semester · Week 8</p><h1>Good morning, {displayName.split(" ")[0]}.</h1><p className="intro">Here’s what’s coming up across your modules.</p></div><div className="semester-pill"><span><Icon name="trend" /></span><div><strong>6 of 14 complete</strong><small>43% through semester</small></div></div></section>
+        <section className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+          <div><p className="eyebrow">Spring semester · Week 8</p><h1>Good morning, {displayName.split(" ")[0]}.</h1><p className="intro">Here’s what’s coming up across your modules.</p></div>
+          <div className="semester-pill"><span><Icon name="trend" /></span><div><strong>6 of 14 complete</strong><small>43% through semester</small></div></div>
+        </section>
+
         <section className="next-card" aria-labelledby="next-deadline-title">
-          <div className="next-copy"><div className="next-label"><span><Icon name="sparkles" className="size-4" /></span>Next deadline</div><div className="mt-8 flex flex-wrap items-center gap-3"><ModuleTag>CS4012</ModuleTag><span className="type-label">Assignment</span></div><h2 id="next-deadline-title">Machine Learning Report</h2><p>Evaluate classification models and present your findings in a concise technical report.</p><div className="due-line"><Icon name="calendar" /><strong>Due Tuesday, 18 March</strong><span>at 2:00 PM</span></div><div className="progress-label"><span>Progress</span><strong>In progress · 35% weighting</strong></div><div className="progress-track"><span /></div></div>
+          <div className="next-copy">
+            <div className="next-label"><span><Icon name="sparkles" className="size-4" /></span>Next deadline</div>
+            <div className="mt-8 flex flex-wrap items-center gap-3"><ModuleTag>CS4012</ModuleTag><span className="type-label">Assignment</span></div>
+            <h2 id="next-deadline-title">Machine Learning Report</h2>
+            <p>Evaluate classification models and present your findings in a concise technical report.</p>
+            <div className="due-line"><Icon name="calendar" /><strong>Due Tuesday, 18 March</strong><span>at 2:00 PM</span></div>
+            <div className="progress-label"><span>Progress</span><strong>In progress · 35% weighting</strong></div><div className="progress-track"><span /></div>
+          </div>
           <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value="02" label="Days" /><b>:</b><CountdownUnit value="14" label="Hours" /><b>:</b><CountdownUnit value="37" label="Mins" /></div><div className="urgency"><span />Due soon — stay focused</div></div>
         </section>
-        <section id="deadlines" className="mt-10"><div className="section-heading"><div><h2>Upcoming deadlines</h2><p>Your next assessments, ordered by due date.</p></div><button className="view-button">View all <span>→</span></button></div><div className="deadline-list">{deadlines.map((item) => <DeadlineRow key={item.title} item={item} />)}</div></section>
-        <section className="summary-grid" aria-label="Semester summary"><article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Due this month</span><strong>5 deadlines</strong></div></article><article><div className="summary-icon green"><Icon name="trend" /></div><div><span>Completed</span><strong>6 assessments</strong></div></article><article><div className="summary-icon amber"><Icon name="clock" /></div><div><span>Next exam</span><strong>21 March</strong></div></article></section>
+
+        <section id="deadlines" className="mt-10">
+          <div className="section-heading"><div><h2>Upcoming deadlines</h2><p>Your next assessments, ordered by due date.</p></div><button className="view-button">View all <span>→</span></button></div>
+          <div className="deadline-list">{deadlines.map((item) => <DeadlineRow key={item.title} item={item} />)}</div>
+        </section>
+
+        <section className="summary-grid" aria-label="Semester summary">
+          <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Due this month</span><strong>5 deadlines</strong></div></article>
+          <article><div className="summary-icon green"><Icon name="trend" /></div><div><span>Completed</span><strong>6 assessments</strong></div></article>
+          <article><div className="summary-icon amber"><Icon name="clock" /></div><div><span>Next exam</span><strong>21 March</strong></div></article>
+        </section>
       </main>
       <footer className="shell footer"><span>DueSoon</span><p>One place for every deadline.</p><small>Spring semester 2026</small></footer>
     </div>

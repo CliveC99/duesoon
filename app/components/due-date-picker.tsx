@@ -46,7 +46,7 @@ function calendarDays(month: Date) {
 
 function timeLabel(value: string) {
   const [hour, minute] = value.split(":").map(Number);
-  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute));
+  return new Intl.DateTimeFormat("en-IE", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(2000, 0, 1, hour, minute));
 }
 
 export function DueDatePicker({ initialValue }: { initialValue?: Date }) {
@@ -61,7 +61,7 @@ export function DueDatePicker({ initialValue }: { initialValue?: Date }) {
   const timeId = useId();
   const isoValue = toIso(date, time);
   const selectedDate = parseLocalDate(date);
-  const readable = isoValue ? new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(isoValue)) : "Choose a date and time";
+  const readable = isoValue ? new Intl.DateTimeFormat("en-IE", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(isoValue)) : "Choose a date and time";
 
   useEffect(() => {
     if (open === "time") selectedTimeRef.current?.scrollIntoView({ block: "center" });
@@ -82,9 +82,9 @@ export function DueDatePicker({ initialValue }: { initialValue?: Date }) {
       <div className="due-picker-fields">
         <div className="picker-control">
           <label id={`${dateId}-label`} htmlFor={dateId}>Date</label>
-          <button id={dateId} type="button" className="picker-trigger" aria-labelledby={`${dateId}-label ${dateId}-value`} aria-expanded={open === "date"} aria-haspopup="dialog" onClick={() => setOpen(open === "date" ? null : "date")}><span id={`${dateId}-value`}>{selectedDate ? selectedDate.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "Select a date"}</span><span aria-hidden="true">▦</span></button>
+          <button id={dateId} type="button" className="picker-trigger" aria-labelledby={`${dateId}-label ${dateId}-value`} aria-expanded={open === "date"} aria-haspopup="dialog" onClick={() => setOpen(open === "date" ? null : "date")}><span id={`${dateId}-value`}>{selectedDate ? selectedDate.toLocaleDateString("en-IE", { day: "numeric", month: "long", year: "numeric" }) : "Select a date"}</span><span aria-hidden="true">▦</span></button>
           {open === "date" && <div className="picker-popover calendar-popover" role="dialog" aria-label="Choose due date">
-            <div className="calendar-header"><button type="button" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1, 12))}>←</button><strong>{month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</strong><button type="button" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1, 12))}>→</button></div>
+            <div className="calendar-header"><button type="button" aria-label="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1, 12))}>←</button><strong>{month.toLocaleDateString("en-IE", { month: "long", year: "numeric" })}</strong><button type="button" aria-label="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1, 12))}>→</button></div>
             <div className="calendar-grid" role="grid">{weekdays.map((day) => <span className="weekday" key={day} role="columnheader">{day}</span>)}{calendarDays(month).map((day) => { const value = dateValue(day); const selected = value === date; const outside = day.getMonth() !== month.getMonth(); return <button type="button" role="gridcell" aria-selected={selected} className={`${selected ? "selected" : ""} ${outside ? "outside" : ""}`} key={value} onClick={() => chooseDate(day)}>{day.getDate()}</button>; })}</div>
           </div>}
         </div>

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import type { DataActionState } from "@/app/data-actions";
 import { DueDatePicker } from "@/app/components/due-date-picker";
+import { formatEnum } from "@/lib/formatting";
 
 type FormAction = (state: DataActionState, formData: FormData) => Promise<DataActionState>;
 type ModuleOption = { id: string; name: string; code: string | null; colour: string };
@@ -24,8 +25,4 @@ export function DeadlineForm({ action, modules, initial }: { action: FormAction;
 export function DeleteForm({ action, label }: { action: FormAction; label: string }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   return <form action={formAction} className="delete-form"><button disabled={pending}>{pending ? "Deleting…" : label}</button>{state.error && <p className="auth-error" role="alert">{state.error}</p>}</form>;
-}
-
-function formatEnum(value: string) {
-  return value.toLowerCase().split("_").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
 }

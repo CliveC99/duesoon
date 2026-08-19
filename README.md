@@ -15,6 +15,7 @@ Required variables:
 
 - `DATABASE_URL`: server-only PostgreSQL connection string used by Prisma.
 - `AUTH_SECRET`: strong Auth.js secret. Generate one with `npx auth secret`.
+- `TIMETABLE_ENCRYPTION_KEY`: a base64-encoded 32-byte key used only to encrypt private timetable feed URLs. Generate one with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`.
 
 Never expose either value through a `NEXT_PUBLIC_` variable or commit a populated environment file.
 
@@ -74,6 +75,8 @@ nano .env
 ```
 
 Replace every placeholder. `POSTGRES_PASSWORD` and the password embedded in `DATABASE_URL` must represent the same value; URL-encode reserved characters in the connection string. Generate `AUTH_SECRET` with `npx auth secret` on a trusted machine. The populated `.env` is ignored by Git and must remain only on the server.
+
+Generate `TIMETABLE_ENCRYPTION_KEY` once and retain it with the production secrets. Losing or changing this key makes saved timetable subscription URLs unreadable; users would need to reconnect their feeds. Do not reuse `AUTH_SECRET`, the database password, or another application secret.
 
 Validate the resolved Compose configuration before starting anything. This catches missing variables and configuration errors without creating containers:
 
@@ -186,5 +189,6 @@ docker compose down
 - Pin and review image/dependency updates regularly; PostgreSQL is intentionally pinned to major version 17 rather than `latest`.
 - Restrict SSH and firewall access to the Mini PC, install operating-system security updates, and monitor free disk space and backup success.
 - Rotate `AUTH_SECRET` and database credentials through the server-side `.env`; changing `AUTH_SECRET` signs users out.
+- Back up `TIMETABLE_ENCRYPTION_KEY` securely alongside the database backup. Timetable syncing is manual in this release; the reusable server-side sync function can later be called by a Mini PC scheduler without changing the UI or data model.
 - The image build installs dependencies and generates Prisma Client inside Linux, so Windows-generated Prisma binaries are never copied into the production image.
 - The runtime image contains only the Next.js standalone output and runs as the unprivileged `nextjs` user. Secrets are supplied only when containers start, not during image build.

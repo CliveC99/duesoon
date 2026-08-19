@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { linkedPersonalFields, membershipKey, ownedRecordWhere, sharedCommonFields, sharedDeadlineMemberWhere } from "../lib/authorization.ts";
+import { linkedPersonalFields, membershipKey, ownedRecordWhere, sharedCommonFields, sharedDeadlineMemberWhere, timetableSourceWhere } from "../lib/authorization.ts";
 
 test("personal record predicates always bind IDs to the authenticated owner", () => {
   assert.deepEqual(ownedRecordWhere("deadline-b", "user-a"), { id: "deadline-b", userId: "user-a" });
   assert.deepEqual(ownedRecordWhere("module-b", "user-a"), { id: "module-b", userId: "user-a" });
   assert.deepEqual(ownedRecordWhere("semester-b", "user-a"), { id: "semester-b", userId: "user-a" });
+});
+
+test("timetable source predicates bind the source to the authenticated user", () => {
+  assert.deepEqual(timetableSourceWhere("source-b", "user-a"), { id: "source-b", userId: "user-a" });
 });
 
 test("group and shared deadline predicates require the authenticated membership", () => {

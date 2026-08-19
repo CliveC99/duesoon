@@ -2,6 +2,10 @@ export function ownedRecordWhere(id: string, userId: string) {
   return { id, userId } as const;
 }
 
+export function timetableSourceWhere(id: string, userId: string) {
+  return { id, userId } as const;
+}
+
 export function membershipKey(groupId: string, userId: string) {
   return { groupId_userId: { groupId, userId } } as const;
 }

@@ -14,6 +14,7 @@ import { UserReminderCentre } from "@/app/components/user-reminder-centre";
 import { auth } from "@/auth";
 import { formatEnum, formatIrishDate, formatIrishDateParts, formatIrishTime } from "@/lib/formatting";
 import { calendarDaysUntil, deadlineUrgency } from "@/lib/reminders";
+import { nextTimetableEvent, timetableCountdown, timetableEventsForIrishDay, type TimetableEventSummary } from "@/lib/timetable";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -68,7 +69,7 @@ function initials(user: User) {
   return source.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
-export function DashboardView({ user, activeDeadlines, recentDeadlines, deadlineCount, completedCount, moduleCount, semester, renderedAt }: { user: User; activeDeadlines: DashboardDeadline[]; recentDeadlines: DashboardDeadline[]; deadlineCount: number; completedCount: number; moduleCount: number; semester: SemesterOverview | null; renderedAt: number }) {
+export function DashboardView({ user, activeDeadlines, recentDeadlines, deadlineCount, completedCount, moduleCount, semester, renderedAt, timetableConnected, timetableEvents }: { user: User; activeDeadlines: DashboardDeadline[]; recentDeadlines: DashboardDeadline[]; deadlineCount: number; completedCount: number; moduleCount: number; semester: SemesterOverview | null; renderedAt: number; timetableConnected: boolean; timetableEvents: TimetableEventSummary[] }) {
   const displayName = user.name?.trim() || "Student";
   const next = activeDeadlines[0];
   const overdue = next ? next.dueAt.getTime() < renderedAt : false;
@@ -76,6 +77,9 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
   const remainingDays = Math.floor(remainingMs / 86400000);
   const remainingHours = Math.floor((remainingMs % 86400000) / 3600000);
   const remainingMinutes = Math.floor((remainingMs % 3600000) / 60000);
+  const timetableNow = new Date(renderedAt);
+  const nextClass = nextTimetableEvent(timetableEvents, timetableNow);
+  const todaysClasses = timetableEventsForIrishDay(timetableEvents, timetableNow).filter((event) => event.endAt.getTime() > renderedAt);
 
   return (
     <div className="min-h-screen">
@@ -109,6 +113,8 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
           </div>
           <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value={String(remainingDays).padStart(2, "0")} label="Days" /><b>:</b><CountdownUnit value={String(remainingHours).padStart(2, "0")} label="Hours" /><b>:</b><CountdownUnit value={String(remainingMinutes).padStart(2, "0")} label="Mins" /></div><div className="urgency"><span />{deadlineUrgency(next.dueAt, new Date(renderedAt))}{overdue ? " — needs attention" : ""}</div></div>
         </section> : deadlineCount > 0 ? <section className="empty-state dashboard-empty finished-state"><h2>You’re all caught up</h2><p>There are no active deadlines needing attention right now.</p><Link className="add-button" href="/deadlines/new">Add deadline</Link></section> : <section className="empty-state dashboard-empty"><h2>No deadlines yet</h2><p>Add a module and your first deadline to start planning your semester.</p><div><Link className="add-button" href="/deadlines/new">Add deadline</Link><Link className="secondary-button" href="/modules">Manage modules</Link></div></section>}
+
+        {timetableConnected ? nextClass && <section className="dashboard-timetable" aria-labelledby="next-class-heading"><div className="dashboard-next-class"><p className="eyebrow">Next class</p><h2 id="next-class-heading">{nextClass.title}</h2><strong>{nextClass.allDay ? "All day" : `${formatIrishTime(nextClass.startAt)}–${formatIrishTime(nextClass.endAt)}`}</strong>{nextClass.location && <span>{nextClass.location}</span>}<em>{nextClass.startAt.getTime() <= renderedAt ? "In progress" : timetableCountdown(nextClass.startAt, timetableNow)}</em></div><div className="dashboard-today-classes"><div><h3>Today’s classes</h3><Link href="/timetable">Full timetable →</Link></div>{todaysClasses.length ? <ul>{todaysClasses.slice(0, 4).map((event) => <li key={event.id}><time>{event.allDay ? "All day" : formatIrishTime(event.startAt)}</time><span><strong>{event.title}</strong>{event.location && <small>{event.location}</small>}</span></li>)}</ul> : <p>No more classes today.</p>}</div></section> : <aside className="dashboard-timetable-prompt"><span>Want your next class alongside your deadlines?</span><Link href="/timetable">Connect timetable →</Link></aside>}
 
         <section id="deadlines" className="mt-10">
           <div className="section-heading"><div><h2>Upcoming deadlines</h2><p>Your next assessments, ordered by due date.</p></div><Link className="view-button" href="/deadlines/new">Add new <span>→</span></Link></div>

@@ -35,6 +35,10 @@ export const deadlineSchema = z.object({
     }
     return date;
   }),
+  reminderDaysBefore: z.string().transform((value) => value === "" ? null : Number(value)).refine(
+    (value) => value === null || [0, 1, 3, 7, 14].includes(value),
+    "Choose a valid reminder.",
+  ),
   weighting: z.string().trim().transform((value) => value === "" ? null : Number(value)).refine((value) => value === null || (Number.isInteger(value) && value >= 0 && value <= 100), "Weighting must be a whole number from 0 to 100."),
   status: z.nativeEnum(DeadlineStatus),
   notes: optionalText(2000),

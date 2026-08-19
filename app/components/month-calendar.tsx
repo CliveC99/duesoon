@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { formatEnum, formatIrishCalendarDate, formatIrishTime } from "@/lib/formatting";
 import { gridDateKey } from "@/lib/calendar";
+import { calendarDaysUntil, deadlineUrgency } from "@/lib/reminders";
 
 type CalendarDeadline = {
   id: string;
@@ -42,7 +43,9 @@ export function MonthCalendar({
     const overdue = activeStatuses.includes(deadline.status) && deadline.dueAt.getTime() < now;
     const finished = deadline.status === "SUBMITTED" || deadline.status === "COMPLETED";
     const outsideActiveSemester = Boolean(activeSemesterId && deadline.module.semesterId !== activeSemesterId);
-    const status = overdue ? "Overdue" : formatEnum(deadline.status);
+    const urgency = deadlineUrgency(deadline.dueAt, new Date(now));
+    const dueSoon = activeStatuses.includes(deadline.status) && calendarDaysUntil(deadline.dueAt, new Date(now)) <= 3;
+    const status = overdue || dueSoon ? urgency : formatEnum(deadline.status);
     return <Link className={`calendar-event status-${deadline.status.toLowerCase().replaceAll("_", "-")}${overdue ? " calendar-event-overdue" : ""}${finished ? " calendar-event-finished" : ""}${outsideActiveSemester ? " calendar-event-other-semester" : ""}`} href={`/deadlines/${deadline.id}/edit`} key={deadline.id} style={{ borderLeftColor: deadline.module.colour }} aria-label={`${deadline.title}, ${deadline.module.name}, ${formatIrishTime(deadline.dueAt)}, ${status}`}><strong>{deadline.title}</strong><span className="calendar-event-module"><i style={{ backgroundColor: deadline.module.colour }} />{deadline.module.code || deadline.module.name}</span><small>{formatIrishTime(deadline.dueAt)} · {formatEnum(deadline.type)}</small><em>{status}</em>{compact && <span className="calendar-event-mobile-module">{deadline.module.name}</span>}</Link>;
   }
 

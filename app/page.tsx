@@ -8,8 +8,10 @@ import { updateDeadlineStatus } from "@/app/data-actions";
 import { signOutUser } from "@/app/auth-actions";
 import { DeadlineStatusControl } from "@/app/components/deadline-controls";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
+import { UserReminderCentre } from "@/app/components/user-reminder-centre";
 import { auth } from "@/auth";
 import { formatEnum, formatIrishDate, formatIrishDateParts, formatIrishTime } from "@/lib/formatting";
+import { calendarDaysUntil, deadlineUrgency } from "@/lib/reminders";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -40,14 +42,18 @@ function CountdownUnit({ value, label }: { value: string; label: string }) {
   return <div className="countdown-unit"><strong>{value}</strong><span>{label}</span></div>;
 }
 
-function DeadlineRow({ item, finished = false }: { item: DashboardDeadline; finished?: boolean }) {
+function DeadlineRow({ item, renderedAt, finished = false }: { item: DashboardDeadline; renderedAt: number; finished?: boolean }) {
   const date = formatIrishDateParts(item.dueAt);
+  const now = new Date(renderedAt);
+  const urgency = deadlineUrgency(item.dueAt, now);
+  const overdue = item.dueAt.getTime() < renderedAt;
+  const dueSoon = !overdue && calendarDaysUntil(item.dueAt, now) <= 7;
   return (
-    <article className={`deadline-row${finished ? " deadline-row-finished" : ""}`}>
+    <article className={`deadline-row${finished ? " deadline-row-finished" : ""}${overdue && !finished ? " deadline-row-overdue" : ""}${dueSoon && !finished ? " deadline-row-urgent" : ""}`}>
       <div className="date-tile"><strong>{date.day}</strong><span>{date.month}</span></div>
       <div className="deadline-copy">
         <div className="flex flex-wrap items-center gap-2.5"><h3>{item.title}</h3><ModuleTag colour={item.module.colour}>{item.module.code || item.module.name}</ModuleTag></div>
-        <p>{formatEnum(item.type)} · {formatIrishDate(item.dueAt)} at {formatIrishTime(item.dueAt)}</p>
+        <p>{formatEnum(item.type)} · {formatIrishDate(item.dueAt)} at {formatIrishTime(item.dueAt)}</p>{!finished && <span className={`urgency-label${overdue ? " urgency-overdue" : dueSoon ? " urgency-soon" : ""}`}>{urgency}</span>}
       </div>
       <div className="deadline-meta"><span>{item.weighting == null ? "No weighting" : `${item.weighting}% weighting`}</span><DeadlineStatusControl id={item.id} status={item.status} action={updateDeadlineStatus} /></div>
       <div className="row-actions"><Link href={`/deadlines/${item.id}/edit`}>Edit</Link></div>
@@ -80,14 +86,13 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
             <Link className="nav-link" href="/calendar"><Icon name="calendar" />Calendar</Link>
             <Link className="nav-link" href="/semesters"><Icon name="clock" />Semesters</Link>
           </nav>
-          <div className="desktop-header-actions">
+          <div className="header-end"><UserReminderCentre /><div className="desktop-header-actions">
             <Link className="add-button" href="/deadlines/new"><Icon name="plus" className="size-4" /><span>Add deadline</span></Link>
             <div className="account-area">
               <div className="account-copy"><strong>{displayName}</strong><form action={signOutUser}><button>Sign out</button></form></div>
               <div className="avatar" aria-label={`${displayName}'s account`}>{initials(user)}</div>
             </div>
-          </div>
-          <MobileNavigation />
+          </div><MobileNavigation /></div>
         </div>
       </header>
 
@@ -106,15 +111,15 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
             <div className="due-line"><Icon name="calendar" /><strong>Due {formatIrishDate(next.dueAt)}</strong><span>at {formatIrishTime(next.dueAt)}</span></div>
             <div className="progress-label"><span>Status</span><strong>{formatEnum(next.status)}{next.weighting == null ? "" : ` · ${next.weighting}% weighting`}</strong></div><div className="progress-track"><span /></div>
           </div>
-          <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value={String(remainingDays).padStart(2, "0")} label="Days" /><b>:</b><CountdownUnit value={String(remainingHours).padStart(2, "0")} label="Hours" /><b>:</b><CountdownUnit value={String(remainingMinutes).padStart(2, "0")} label="Mins" /></div><div className="urgency"><span />{overdue ? "Overdue — needs attention" : remainingDays < 3 ? "Due soon — stay focused" : "Coming up"}</div></div>
+          <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value={String(remainingDays).padStart(2, "0")} label="Days" /><b>:</b><CountdownUnit value={String(remainingHours).padStart(2, "0")} label="Hours" /><b>:</b><CountdownUnit value={String(remainingMinutes).padStart(2, "0")} label="Mins" /></div><div className="urgency"><span />{deadlineUrgency(next.dueAt, new Date(renderedAt))}{overdue ? " — needs attention" : ""}</div></div>
         </section> : deadlineCount > 0 ? <section className="empty-state dashboard-empty finished-state"><h2>You’re all caught up</h2><p>There are no active deadlines needing attention right now.</p><Link className="add-button" href="/deadlines/new">Add deadline</Link></section> : <section className="empty-state dashboard-empty"><h2>No deadlines yet</h2><p>Add a module and your first deadline to start planning your semester.</p><div><Link className="add-button" href="/deadlines/new">Add deadline</Link><Link className="secondary-button" href="/modules">Manage modules</Link></div></section>}
 
         <section id="deadlines" className="mt-10">
           <div className="section-heading"><div><h2>Upcoming deadlines</h2><p>Your next assessments, ordered by due date.</p></div><Link className="view-button" href="/deadlines/new">Add new <span>→</span></Link></div>
-          {activeDeadlines.length ? <div className="deadline-list">{activeDeadlines.map((item) => <DeadlineRow key={item.id} item={item} />)}</div> : <div className="deadline-list-empty">Nothing currently needs attention.</div>}
+          {activeDeadlines.length ? <div className="deadline-list">{activeDeadlines.map((item) => <DeadlineRow key={item.id} item={item} renderedAt={renderedAt} />)}</div> : <div className="deadline-list-empty">Nothing currently needs attention.</div>}
         </section>
 
-        {recentDeadlines.length > 0 && <details className="recent-work"><summary><span>Recently submitted or completed</span><small>{recentDeadlines.length} {recentDeadlines.length === 1 ? "deadline" : "deadlines"}</small></summary><div className="deadline-list">{recentDeadlines.map((item) => <DeadlineRow key={item.id} item={item} finished />)}</div></details>}
+        {recentDeadlines.length > 0 && <details className="recent-work"><summary><span>Recently submitted or completed</span><small>{recentDeadlines.length} {recentDeadlines.length === 1 ? "deadline" : "deadlines"}</small></summary><div className="deadline-list">{recentDeadlines.map((item) => <DeadlineRow key={item.id} item={item} renderedAt={renderedAt} finished />)}</div></details>}
 
         <section className="summary-grid" aria-label="Semester summary">
           <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Active</span><strong>{activeDeadlines.length} deadlines</strong></div></article>

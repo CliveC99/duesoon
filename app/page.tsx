@@ -128,7 +128,7 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
           <article><div className="summary-icon amber"><Icon name="clock" /></div><div><span>Modules</span><strong>{moduleCount} active</strong></div></article>
         </section>
       </main>
-      <footer className="shell footer"><span>DueSoon</span><p>One place for every deadline.</p><small>Semester 2 · 2025/26</small></footer>
+      <footer className="shell footer"><span>DueSoon</span><p>One place for every deadline.</p><small>{semester ? `${semester.name} · ${semester.academicYear}` : "Your college deadlines"}</small></footer>
     </div>
   );
 }

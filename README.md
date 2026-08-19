@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DueSoon
 
-## Getting Started
+DueSoon is a private deadline and assessment tracker designed around Irish college semesters. It uses Next.js, Auth.js, Prisma and PostgreSQL.
 
-First, run the development server:
+## Requirements
+
+- Node.js 24 (the automated test command uses Node's TypeScript test support)
+- PostgreSQL
+
+## Environment
+
+Copy `.env.example` to `.env` or `.env.local` and replace every placeholder. These local files are ignored by Git.
+
+Required variables:
+
+- `DATABASE_URL`: server-only PostgreSQL connection string used by Prisma.
+- `AUTH_SECRET`: strong Auth.js secret. Generate one with `npx auth secret`.
+
+Never expose either value through a `NEXT_PUBLIC_` variable or commit a populated environment file.
+
+## Local setup
 
 ```bash
+npm install
+npx prisma migrate dev
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000` for local development.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test
+npm run lint
+npx tsc --noEmit
+npx prisma validate
+npm run build
+```
 
-## Learn More
+## Production database migrations
 
-To learn more about Next.js, take a look at the following resources:
+Apply committed migrations without creating or modifying migration files:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx prisma migrate deploy
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To verify the complete migration history safely before deployment, create a separate disposable PostgreSQL database, point `DATABASE_URL` at that database only, run `npx prisma migrate deploy`, and then run `npx prisma migrate status`. Never use `prisma migrate reset` against the current or production database.
 
-## Deploy on Vercel
+After migrations and a successful build, start the production server with:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm start
+```

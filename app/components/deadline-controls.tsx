@@ -1,7 +1,7 @@
 "use client";
 
 import { DeadlineStatus } from "@prisma/client";
-import { useActionState, useRef } from "react";
+import { useActionState, useId, useRef } from "react";
 
 import type { DataActionState } from "@/app/data-actions";
 import { formatEnum } from "@/lib/formatting";
@@ -45,6 +45,7 @@ export function ConfirmDeleteDialog({
   action: DeleteAction;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   const [state, formAction, pending] = useActionState(action, {});
 
   return (
@@ -52,10 +53,10 @@ export function ConfirmDeleteDialog({
       <button className="danger-button" type="button" onClick={() => dialogRef.current?.showModal()}>
         Delete {itemLabel}
       </button>
-      <dialog ref={dialogRef} className="confirm-dialog" aria-labelledby="confirm-delete-title">
+      <dialog ref={dialogRef} className="confirm-dialog" aria-labelledby={titleId}>
         <div className="confirm-dialog-card">
           <p className="confirm-eyebrow">Permanent action</p>
-          <h2 id="confirm-delete-title">Delete “{itemName}”?</h2>
+          <h2 id={titleId}>Delete “{itemName}”?</h2>
           <p>This {itemLabel} will be permanently removed. This cannot be undone.</p>
           {state.error && <p className="auth-error" role="alert">{state.error}</p>}
           <form action={formAction} className="confirm-actions">
@@ -66,4 +67,11 @@ export function ConfirmDeleteDialog({
       </dialog>
     </div>
   );
+}
+
+export function ConfirmActionDialog({ action, triggerLabel, title, description, confirmLabel, pendingLabel }: { action: DeleteAction; triggerLabel: string; title: string; description: string; confirmLabel: string; pendingLabel: string }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const [state, formAction, pending] = useActionState(action, {});
+  return <div className="deadline-delete"><button className="danger-button" type="button" onClick={() => dialogRef.current?.showModal()}>{triggerLabel}</button><dialog ref={dialogRef} className="confirm-dialog" aria-labelledby={titleId}><div className="confirm-dialog-card"><p className="confirm-eyebrow">Please confirm</p><h2 id={titleId}>{title}</h2><p>{description}</p>{state.error && <p className="auth-error" role="alert">{state.error}</p>}<form action={formAction} className="confirm-actions"><button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()} disabled={pending}>Cancel</button><button type="submit" className="danger-button danger-button-solid" disabled={pending}>{pending ? pendingLabel : confirmLabel}</button></form></div></dialog></div>;
 }

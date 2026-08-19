@@ -1,13 +1,13 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
-import { compare, hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
 import { changePasswordSchema, profileEmailSchema, profileNameSchema } from "@/lib/auth-validation";
 import { updateSession } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
+import { hashPassword, verifyPassword } from "@/lib/passwords";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 
 export type ProfileActionState = {
   error?: string;
@@ -42,7 +42,7 @@ export async function updateProfileEmail(_state: ProfileActionState, formData: F
     const result = await prisma.user.updateMany({ where: { id: userId }, data: { email: parsed.data.email } });
     if (result.count !== 1) return { error: "Unable to update your email address." };
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (isUniqueConstraintError(error)) {
       return { fieldErrors: { email: ["An account with this email already exists."] }, values: { email: submittedEmail } };
     }
     throw error;
@@ -57,13 +57,13 @@ export async function changePassword(_state: ProfileActionState, formData: FormD
   const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
-  if (!user?.passwordHash || !await compare(parsed.data.currentPassword, user.passwordHash)) {
+  if (!user?.passwordHash || !await verifyPassword(parsed.data.currentPassword, user.passwordHash)) {
     return { fieldErrors: { currentPassword: ["Current password is incorrect."] } };
   }
-  if (await compare(parsed.data.newPassword, user.passwordHash)) {
+  if (await verifyPassword(parsed.data.newPassword, user.passwordHash)) {
     return { fieldErrors: { newPassword: ["Choose a password different from your current password."] } };
   }
-  const passwordHash = await hash(parsed.data.newPassword, 12);
+  const passwordHash = await hashPassword(parsed.data.newPassword);
   const result = await prisma.user.updateMany({ where: { id: userId }, data: { passwordHash } });
   if (result.count !== 1) return { error: "Unable to change your password." };
   return { success: "Password changed. Use your new password the next time you sign in." };

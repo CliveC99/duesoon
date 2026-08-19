@@ -67,6 +67,8 @@ model Deadline {
   type      DeadlineType
   dueAt     DateTime
   weighting Int?
+  resultPercent Float?
+  resultRecordedAt DateTime?
   status    DeadlineStatus @default(NOT_STARTED)
   notes     String?
   createdAt DateTime       @default(now())

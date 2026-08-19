@@ -36,11 +36,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    jwt({ token, user }) {
+      if (user?.id) token.sub = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      if (session.user && token.sub) session.user.id = token.sub;
+      return session;
+    },
     authorized({ auth: session, request }) {
       const isAuthenticated = Boolean(session?.user);
       const path = request.nextUrl.pathname;
 
-      if (path.startsWith("/dashboard")) return isAuthenticated;
+      if (["/dashboard", "/modules", "/deadlines"].some((route) => path.startsWith(route))) return isAuthenticated;
       if (isAuthenticated && (path === "/sign-in" || path === "/sign-up")) {
         return Response.redirect(new URL("/dashboard", request.nextUrl));
       }

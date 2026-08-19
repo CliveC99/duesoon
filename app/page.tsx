@@ -1,7 +1,16 @@
 import type { User } from "next-auth";
+import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DeadlineStatus, DeadlineType } from "@prisma/client";
 
+import { deleteDeadline, updateDeadlineStatus } from "@/app/data-actions";
+import { DeleteForm } from "@/app/components/data-forms";
 import { auth, signOut } from "@/auth";
+
+export const metadata: Metadata = {
+  title: "Home",
+};
 
 type IconName = "calendar" | "clock" | "grid" | "plus" | "sparkles" | "trend";
 
@@ -17,30 +26,30 @@ function Icon({ name, className = "size-5" }: { name: IconName; className?: stri
   return <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
 
-const deadlines = [
-  { date: "18", month: "MAR", title: "Machine Learning Report", module: "CS4012", meta: "Assignment · 2:00 PM", weight: "35%", status: "In progress", tone: "violet" },
-  { date: "21", month: "MAR", title: "Corporate Finance Exam", module: "FN3021", meta: "Exam · 9:30 AM", weight: "50%", status: "Revision", tone: "amber" },
-  { date: "26", month: "MAR", title: "Modern European History", module: "HI2044", meta: "Essay · 11:59 PM", weight: "40%", status: "Not started", tone: "blue" },
-];
+export type DashboardDeadline = { id: string; title: string; type: DeadlineType; dueAt: Date; weighting: number | null; status: DeadlineStatus; notes: string | null; module: { name: string; code: string | null; colour: string } };
 
-function ModuleTag({ children, tone = "violet" }: { children: React.ReactNode; tone?: string }) {
-  return <span className={`module-tag module-${tone}`}>{children}</span>;
+function ModuleTag({ children, colour }: { children: React.ReactNode; colour?: string }) {
+  return <span className="module-tag" style={colour ? { color: colour, backgroundColor: `${colour}18`, border: `1px solid ${colour}35` } : undefined}>{children}</span>;
 }
 
 function CountdownUnit({ value, label }: { value: string; label: string }) {
   return <div className="countdown-unit"><strong>{value}</strong><span>{label}</span></div>;
 }
 
-function DeadlineRow({ item }: { item: (typeof deadlines)[number] }) {
+function label(value: string) { return value.toLowerCase().split("_").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "); }
+function dateParts(date: Date) { return { day: date.toLocaleDateString("en-IE", { day: "2-digit" }), month: date.toLocaleDateString("en-IE", { month: "short" }).toUpperCase() }; }
+
+function DeadlineRow({ item }: { item: DashboardDeadline }) {
+  const date = dateParts(item.dueAt);
   return (
     <article className="deadline-row">
-      <div className="date-tile"><strong>{item.date}</strong><span>{item.month}</span></div>
+      <div className="date-tile"><strong>{date.day}</strong><span>{date.month}</span></div>
       <div className="deadline-copy">
-        <div className="flex flex-wrap items-center gap-2.5"><h3>{item.title}</h3><ModuleTag tone={item.tone}>{item.module}</ModuleTag></div>
-        <p>{item.meta}</p>
+        <div className="flex flex-wrap items-center gap-2.5"><h3>{item.title}</h3><ModuleTag colour={item.module.colour}>{item.module.code || item.module.name}</ModuleTag></div>
+        <p>{label(item.type)} · {item.dueAt.toLocaleTimeString("en-IE", { hour: "numeric", minute: "2-digit" })}</p>
       </div>
-      <div className="deadline-meta"><span>{item.weight} weighting</span><span className={`status status-${item.tone}`}><i />{item.status}</span></div>
-      <button className="more-button" aria-label={`More options for ${item.title}`}>•••</button>
+      <div className="deadline-meta"><span>{item.weighting == null ? "No weighting" : `${item.weighting}% weighting`}</span><form action={updateDeadlineStatus}><input type="hidden" name="id" value={item.id} /><select className="status-select" name="status" defaultValue={item.status}>{Object.values(DeadlineStatus).map((status) => <option key={status} value={status}>{label(status)}</option>)}</select><button className="status-update">Save</button></form></div>
+      <div className="row-actions"><Link href={`/deadlines/${item.id}/edit`}>Edit</Link><DeleteForm action={deleteDeadline.bind(null, item.id)} label="Delete" /></div>
     </article>
   );
 }
@@ -50,8 +59,13 @@ function initials(user: User) {
   return source.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
-export function DashboardView({ user }: { user: User }) {
+export function DashboardView({ user, deadlines, completedCount, moduleCount, renderedAt }: { user: User; deadlines: DashboardDeadline[]; completedCount: number; moduleCount: number; renderedAt: number }) {
   const displayName = user.name?.trim() || "Student";
+  const next = deadlines[0];
+  const remainingMs = next ? Math.max(0, next.dueAt.getTime() - renderedAt) : 0;
+  const remainingDays = Math.floor(remainingMs / 86400000);
+  const remainingHours = Math.floor((remainingMs % 86400000) / 3600000);
+  const remainingMinutes = Math.floor((remainingMs % 3600000) / 60000);
 
   return (
     <div className="min-h-screen">
@@ -63,7 +77,7 @@ export function DashboardView({ user }: { user: User }) {
             <a className="nav-link" href="#deadlines"><Icon name="calendar" />Deadlines</a>
           </nav>
           <div className="flex items-center gap-3">
-            <button className="add-button"><Icon name="plus" className="size-4" /><span>Add deadline</span></button>
+            <Link className="add-button" href="/deadlines/new"><Icon name="plus" className="size-4" /><span>Add deadline</span></Link>
             <div className="account-area">
               <div className="account-copy"><strong>{displayName}</strong><form action={async () => { "use server"; await signOut({ redirectTo: "/sign-in" }); }}><button>Sign out</button></form></div>
               <div className="avatar" aria-label={`${displayName}'s account`}>{initials(user)}</div>
@@ -78,27 +92,27 @@ export function DashboardView({ user }: { user: User }) {
           <div className="semester-pill"><span><Icon name="trend" /></span><div><strong>6 of 14 complete</strong><small>43% through semester</small></div></div>
         </section>
 
-        <section className="next-card" aria-labelledby="next-deadline-title">
+        {next ? <section className="next-card" aria-labelledby="next-deadline-title">
           <div className="next-copy">
             <div className="next-label"><span><Icon name="sparkles" className="size-4" /></span>Next deadline</div>
-            <div className="mt-8 flex flex-wrap items-center gap-3"><ModuleTag>CS4012</ModuleTag><span className="type-label">Assignment</span></div>
-            <h2 id="next-deadline-title">Machine Learning Report</h2>
-            <p>Evaluate classification models and present your findings in a concise technical report.</p>
-            <div className="due-line"><Icon name="calendar" /><strong>Due Tuesday, 18 March</strong><span>at 2:00 PM</span></div>
-            <div className="progress-label"><span>Progress</span><strong>In progress · 35% weighting</strong></div><div className="progress-track"><span /></div>
+            <div className="mt-8 flex flex-wrap items-center gap-3"><ModuleTag colour={next.module.colour}>{next.module.code || next.module.name}</ModuleTag><span className="type-label">{label(next.type)}</span></div>
+            <h2 id="next-deadline-title">{next.title}</h2>
+            <p>{next.notes || `Your next ${label(next.type).toLowerCase()} for ${next.module.name}.`}</p>
+            <div className="due-line"><Icon name="calendar" /><strong>Due {next.dueAt.toLocaleDateString("en-IE", { weekday: "long", day: "numeric", month: "long" })}</strong><span>at {next.dueAt.toLocaleTimeString("en-IE", { hour: "numeric", minute: "2-digit" })}</span></div>
+            <div className="progress-label"><span>Status</span><strong>{label(next.status)}{next.weighting == null ? "" : ` · ${next.weighting}% weighting`}</strong></div><div className="progress-track"><span /></div>
           </div>
-          <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value="02" label="Days" /><b>:</b><CountdownUnit value="14" label="Hours" /><b>:</b><CountdownUnit value="37" label="Mins" /></div><div className="urgency"><span />Due soon — stay focused</div></div>
-        </section>
+          <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value={String(remainingDays).padStart(2, "0")} label="Days" /><b>:</b><CountdownUnit value={String(remainingHours).padStart(2, "0")} label="Hours" /><b>:</b><CountdownUnit value={String(remainingMinutes).padStart(2, "0")} label="Mins" /></div><div className="urgency"><span />{remainingDays < 3 ? "Due soon — stay focused" : "Coming up"}</div></div>
+        </section> : <section className="empty-state dashboard-empty"><h2>No upcoming deadlines</h2><p>Add a module and your first deadline to start planning your semester.</p><div><Link className="add-button" href="/deadlines/new">Add deadline</Link><Link className="secondary-button" href="/modules">Manage modules</Link></div></section>}
 
         <section id="deadlines" className="mt-10">
-          <div className="section-heading"><div><h2>Upcoming deadlines</h2><p>Your next assessments, ordered by due date.</p></div><button className="view-button">View all <span>→</span></button></div>
-          <div className="deadline-list">{deadlines.map((item) => <DeadlineRow key={item.title} item={item} />)}</div>
+          <div className="section-heading"><div><h2>Upcoming deadlines</h2><p>Your next assessments, ordered by due date.</p></div><Link className="view-button" href="/deadlines/new">Add new <span>→</span></Link></div>
+          {deadlines.length ? <div className="deadline-list">{deadlines.map((item) => <DeadlineRow key={item.id} item={item} />)}</div> : <div className="deadline-list-empty">Nothing due yet.</div>}
         </section>
 
         <section className="summary-grid" aria-label="Semester summary">
-          <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Due this month</span><strong>5 deadlines</strong></div></article>
-          <article><div className="summary-icon green"><Icon name="trend" /></div><div><span>Completed</span><strong>6 assessments</strong></div></article>
-          <article><div className="summary-icon amber"><Icon name="clock" /></div><div><span>Next exam</span><strong>21 March</strong></div></article>
+          <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Upcoming</span><strong>{deadlines.length} deadlines</strong></div></article>
+          <article><div className="summary-icon green"><Icon name="trend" /></div><div><span>Completed</span><strong>{completedCount} assessments</strong></div></article>
+          <article><div className="summary-icon amber"><Icon name="clock" /></div><div><span>Modules</span><strong>{moduleCount} active</strong></div></article>
         </section>
       </main>
       <footer className="shell footer"><span>DueSoon</span><p>One place for every deadline.</p><small>Spring semester 2026</small></footer>

@@ -20,7 +20,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const { year, monthIndex } = parseCalendarMonth(query.month ?? currentMonthKey, now);
   const monthKey = calendarMonthKey(year, monthIndex);
   const { days, queryStart, queryEnd } = calendarGrid(year, monthIndex);
-  const [session, activeSemester, deadlines] = await Promise.all([
+  const [session, activeSemester, deadlines, timetableEvents] = await Promise.all([
     auth(),
     prisma.semester.findFirst({ where: { userId, isActive: true }, select: { id: true, name: true, academicYear: true }, orderBy: { updatedAt: "desc" } }),
     prisma.deadline.findMany({
@@ -28,6 +28,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       select: { id: true, title: true, type: true, dueAt: true, status: true, module: { select: { name: true, code: true, colour: true, semesterId: true } } },
       orderBy: { dueAt: "asc" },
     }),
+    prisma.timetableEvent.findMany({ where: { userId, status: { not: "CANCELLED" }, startAt: { gte: queryStart, lt: queryEnd } }, select: { id: true, title: true, location: true, startAt: true, endAt: true, allDay: true }, orderBy: { startAt: "asc" } }),
   ]);
   const sortedDeadlines = deadlines.sort((left, right) => {
     const leftActive = left.module.semesterId === activeSemester?.id ? 0 : 1;
@@ -39,7 +40,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     (groups[key] ??= []).push(deadline);
     return groups;
   }, {});
+  const timetableEventsByDate = timetableEvents.reduce<Record<string, typeof timetableEvents>>((groups, event) => { const key = irishDateKey(event.startAt); (groups[key] ??= []).push(event); return groups; }, {});
   const heading = new Intl.DateTimeFormat("en-IE", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, monthIndex, 1)));
 
-  return <ManageShell user={session!.user!} title="Calendar" description={activeSemester ? `${activeSemester.name} · ${activeSemester.academicYear} is prioritised. Browse any month to see all your deadlines.` : "Browse your deadlines month by month."}><div className="calendar-toolbar"><div className="calendar-navigation"><Link className="calendar-nav-button" href={`/calendar?month=${adjacentMonth(year, monthIndex, -1)}`} aria-label="Previous month">←</Link><Link className="calendar-today-button" href="/calendar">Today</Link><Link className="calendar-nav-button" href={`/calendar?month=${adjacentMonth(year, monthIndex, 1)}`} aria-label="Next month">→</Link></div><h2>{heading}</h2><Link className="add-button" href="/deadlines/new">Add deadline</Link></div><MonthCalendar key={monthKey} days={days} deadlinesByDate={deadlinesByDate} monthKey={monthKey} activeSemesterId={activeSemester?.id ?? null} todayKey={todayKey} now={now.getTime()} /></ManageShell>;
+  return <ManageShell user={session!.user!} title="Calendar" description={activeSemester ? `${activeSemester.name} · ${activeSemester.academicYear} is prioritised. Browse deadlines and classes together.` : "Browse your deadlines and classes month by month."}><div className="calendar-toolbar"><div className="calendar-navigation"><Link className="calendar-nav-button" href={`/calendar?month=${adjacentMonth(year, monthIndex, -1)}`} aria-label="Previous month">←</Link><Link className="calendar-today-button" href="/calendar">Today</Link><Link className="calendar-nav-button" href={`/calendar?month=${adjacentMonth(year, monthIndex, 1)}`} aria-label="Next month">→</Link></div><h2>{heading}</h2><Link className="add-button" href="/deadlines/new">Add deadline</Link></div><MonthCalendar key={monthKey} days={days} deadlinesByDate={deadlinesByDate} timetableEventsByDate={timetableEventsByDate} monthKey={monthKey} activeSemesterId={activeSemester?.id ?? null} todayKey={todayKey} now={now.getTime()} /></ManageShell>;
 }

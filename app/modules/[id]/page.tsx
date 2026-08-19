@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { updateDeadlineResult } from "@/app/data-actions";
 import { DeadlineResultForm } from "@/app/components/deadline-result-form";
+import { GradeTargetCalculator } from "@/app/components/grade-target-calculator";
 import { ManageShell } from "@/app/components/manage-shell";
 import { auth } from "@/auth";
 import { formatEnum, formatIrishDate } from "@/lib/formatting";
@@ -50,6 +51,8 @@ export default async function ModuleOverviewPage({ params }: { params: Promise<{
         <p className={`weighting-notice ${grades.totalWeighting > 100 ? "weighting-warning" : ""}`}>{weightingMessage}</p>
         {grades.unweightedCount > 0 && <p className="weighting-notice">{grades.unweightedCount} {grades.unweightedCount === 1 ? "deadline has" : "deadlines have"} no weighting and cannot contribute to grade calculations yet.</p>}
       </section>
+
+      <GradeTargetCalculator deadlines={module.deadlines.map((deadline) => ({ title: deadline.title, weighting: deadline.weighting, resultPercent: deadline.resultPercent }))} />
 
       <section className="assessment-section" aria-labelledby="assessment-heading">
         <div className="section-heading"><div><h2 id="assessment-heading">Assessment breakdown</h2><p>Record results as they become available.</p></div></div>

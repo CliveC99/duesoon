@@ -17,10 +17,15 @@ export default async function DashboardPage() {
   const now = new Date();
   const activeSemester = await prisma.semester.findFirst({ where: { userId: session.user.id, isActive: true }, select: { id: true, name: true, academicYear: true, startDate: true, endDate: true }, orderBy: { updatedAt: "desc" } });
   const semesterFilter = activeSemester ? { module: { semesterId: activeSemester.id } } : {};
-  const [activeDeadlines, recentDeadlines, completedCount, moduleCount, deadlineCount, timetableSource, timetableEvents] = await Promise.all([
+  const [activeDeadlines, dailyDeadlines, recentDeadlines, completedCount, moduleCount, deadlineCount, timetableSource, timetableEvents] = await Promise.all([
     prisma.deadline.findMany({
       where: { userId: session.user.id, status: { in: ["NOT_STARTED", "IN_PROGRESS"] }, ...semesterFilter },
       select: { id: true, title: true, type: true, dueAt: true, weighting: true, status: true, notes: true, module: { select: { name: true, code: true, colour: true } } },
+      orderBy: { dueAt: "asc" },
+    }),
+    prisma.deadline.findMany({
+      where: { userId: session.user.id, status: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
+      select: { id: true, title: true, dueAt: true, weighting: true, reminderDaysBefore: true, status: true, module: { select: { name: true, code: true, colour: true } } },
       orderBy: { dueAt: "asc" },
     }),
     prisma.deadline.findMany({
@@ -37,5 +42,5 @@ export default async function DashboardPage() {
   ]);
 
   const semesterOverview = activeSemester ? { ...activeSemester, ...semesterTiming(activeSemester.startDate, activeSemester.endDate, now) } : null;
-  return <DashboardView user={session.user} activeDeadlines={activeDeadlines} recentDeadlines={recentDeadlines} deadlineCount={deadlineCount} completedCount={completedCount} moduleCount={moduleCount} semester={semesterOverview} renderedAt={now.getTime()} timetableConnected={Boolean(timetableSource)} timetableEvents={timetableEvents} />;
+  return <DashboardView user={session.user} activeDeadlines={activeDeadlines} dailyDeadlines={dailyDeadlines} recentDeadlines={recentDeadlines} deadlineCount={deadlineCount} completedCount={completedCount} moduleCount={moduleCount} semester={semesterOverview} renderedAt={now.getTime()} timetableConnected={Boolean(timetableSource)} timetableEvents={timetableEvents} />;
 }

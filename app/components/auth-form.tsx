@@ -12,7 +12,7 @@ export function SignInForm() {
   return (
     <form action={action} className="auth-form">
       <label htmlFor="email">Email address</label>
-      <input id="email" name="email" type="email" autoComplete="email" placeholder="you@university.edu" required />
+      <input id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
       <label htmlFor="password">Password</label>
       <input id="password" name="password" type="password" autoComplete="current-password" placeholder="Enter your password" minLength={8} maxLength={72} required />
       {state.error && <p className="auth-error" role="alert">{state.error}</p>}
@@ -29,7 +29,7 @@ export function SignUpForm() {
       <label htmlFor="name">Full name</label>
       <input id="name" name="name" type="text" autoComplete="name" placeholder="Alex Morgan" minLength={2} maxLength={80} required />
       <label htmlFor="email">Email address</label>
-      <input id="email" name="email" type="email" autoComplete="email" placeholder="you@university.edu" required />
+      <input id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
       <label htmlFor="password">Password</label>
       <input id="password" name="password" type="password" autoComplete="new-password" placeholder="At least 8 characters" minLength={8} maxLength={72} required />
       <label htmlFor="confirmPassword">Confirm password</label>

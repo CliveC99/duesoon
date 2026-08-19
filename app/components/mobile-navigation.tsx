@@ -12,6 +12,7 @@ const navigation = [
   { href: "/modules", label: "Modules" },
   { href: "/semesters", label: "Semesters" },
   { href: "/groups", label: "Groups" },
+  { href: "/profile", label: "Profile" },
 ];
 
 export function MobileNavigation() {

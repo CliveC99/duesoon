@@ -90,8 +90,8 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
           <div className="header-end"><UserReminderCentre /><div className="desktop-header-actions">
             <Link className="add-button" href="/deadlines/new"><Icon name="plus" className="size-4" /><span>Add deadline</span></Link>
             <div className="account-area">
-              <div className="account-copy"><strong>{displayName}</strong><form action={signOutUser}><button>Sign out</button></form></div>
-              <div className="avatar" aria-label={`${displayName}'s account`}>{initials(user)}</div>
+              <div className="account-copy"><Link href="/profile"><strong>{displayName}</strong></Link><form action={signOutUser}><button>Sign out</button></form></div>
+              <Link className="avatar" href="/profile" aria-label={`${displayName}'s profile settings`}>{initials(user)}</Link>
             </div>
           </div><MobileNavigation /></div>
         </div>

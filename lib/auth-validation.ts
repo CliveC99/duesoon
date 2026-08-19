@@ -22,3 +22,20 @@ export const signUpSchema = z
     message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
+
+export const profileNameSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters.").max(80, "Name must be 80 characters or fewer."),
+});
+
+export const profileEmailSchema = z.object({ email });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password."),
+    newPassword: password,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New passwords do not match.",
+    path: ["confirmPassword"],
+  });

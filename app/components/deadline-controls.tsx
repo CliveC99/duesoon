@@ -35,11 +35,13 @@ export function DeadlineStatusControl({
   );
 }
 
-export function DeleteDeadlineDialog({
-  deadlineTitle,
+export function ConfirmDeleteDialog({
+  itemLabel,
+  itemName,
   action,
 }: {
-  deadlineTitle: string;
+  itemLabel: string;
+  itemName: string;
   action: DeleteAction;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -48,17 +50,17 @@ export function DeleteDeadlineDialog({
   return (
     <div className="deadline-delete">
       <button className="danger-button" type="button" onClick={() => dialogRef.current?.showModal()}>
-        Delete deadline
+        Delete {itemLabel}
       </button>
-      <dialog ref={dialogRef} className="confirm-dialog" aria-labelledby="delete-deadline-title">
+      <dialog ref={dialogRef} className="confirm-dialog" aria-labelledby="confirm-delete-title">
         <div className="confirm-dialog-card">
           <p className="confirm-eyebrow">Permanent action</p>
-          <h2 id="delete-deadline-title">Delete “{deadlineTitle}”?</h2>
-          <p>This deadline will be permanently removed. This cannot be undone.</p>
+          <h2 id="confirm-delete-title">Delete “{itemName}”?</h2>
+          <p>This {itemLabel} will be permanently removed. This cannot be undone.</p>
           {state.error && <p className="auth-error" role="alert">{state.error}</p>}
           <form action={formAction} className="confirm-actions">
             <button type="button" className="secondary-button" onClick={() => dialogRef.current?.close()} disabled={pending}>Cancel</button>
-            <button type="submit" className="danger-button danger-button-solid" disabled={pending}>{pending ? "Deleting…" : "Delete deadline"}</button>
+            <button type="submit" className="danger-button danger-button-solid" disabled={pending}>{pending ? "Deleting…" : `Delete ${itemLabel}`}</button>
           </form>
         </div>
       </dialog>

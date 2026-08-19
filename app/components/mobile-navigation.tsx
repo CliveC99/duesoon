@@ -11,6 +11,7 @@ const navigation = [
   { href: "/calendar", label: "Calendar" },
   { href: "/modules", label: "Modules" },
   { href: "/semesters", label: "Semesters" },
+  { href: "/groups", label: "Groups" },
 ];
 
 export function MobileNavigation() {

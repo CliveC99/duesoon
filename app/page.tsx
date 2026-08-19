@@ -85,6 +85,7 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
             <a className="nav-link" href="#deadlines"><Icon name="calendar" />Deadlines</a>
             <Link className="nav-link" href="/calendar"><Icon name="calendar" />Calendar</Link>
             <Link className="nav-link" href="/semesters"><Icon name="clock" />Semesters</Link>
+            <Link className="nav-link" href="/groups"><Icon name="grid" />Groups</Link>
           </nav>
           <div className="header-end"><UserReminderCentre /><div className="desktop-header-actions">
             <Link className="add-button" href="/deadlines/new"><Icon name="plus" className="size-4" /><span>Add deadline</span></Link>

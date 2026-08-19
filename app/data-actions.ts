@@ -132,7 +132,15 @@ export async function updateDeadline(id: string, _state: DataActionState, formDa
   const parsed = deadlineSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   if (!await ownedModuleExists(parsed.data.moduleId, userId)) return { error: "Choose one of your modules." };
-  const result = await prisma.deadline.updateMany({ where: { id, userId }, data: parsed.data });
+  const existing = await prisma.deadline.findFirst({ where: { id, userId }, select: { sharedDeadlineId: true } });
+  if (!existing) return { error: "Deadline not found." };
+  const data = existing.sharedDeadlineId ? {
+    moduleId: parsed.data.moduleId,
+    reminderDaysBefore: parsed.data.reminderDaysBefore,
+    status: parsed.data.status,
+    notes: parsed.data.notes,
+  } : parsed.data;
+  const result = await prisma.deadline.updateMany({ where: { id, userId }, data });
   if (result.count !== 1) return { error: "Deadline not found." };
   revalidatePath("/dashboard");
   redirect("/dashboard");

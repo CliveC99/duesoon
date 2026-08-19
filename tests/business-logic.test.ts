@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
 import { adjacentMonth, calendarGrid, gridDateKey, parseCalendarMonth } from "../lib/calendar.ts";
-import { calculateModuleGrades } from "../lib/grades.ts";
+import { calculateGradeTarget, calculateModuleGrades } from "../lib/grades.ts";
+import { focusRecommendation } from "../lib/focus.ts";
 import { calendarDaysUntil, deadlineUrgency, isReminderEligible } from "../lib/reminders.ts";
 import { semesterTiming } from "../lib/semester.ts";
 
@@ -13,6 +15,48 @@ test("grade calculations include assessed weighting without inventing missing re
   assert.equal(result.weightedPoints, 30);
   assert.equal(result.currentAverage, 75);
   assert.equal(result.unweightedCount, 1);
+});
+
+test("focus prioritises urgency, weighting, active status, and returns no finished work", () => {
+  const now = new Date("2026-08-19T12:00:00Z");
+  const deadline = (id: string, days: number, weighting: number | null, status: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "COMPLETED" = "IN_PROGRESS") => ({ id, title: id, dueAt: new Date(now.getTime() + days * 86_400_000), weighting, status });
+  assert.equal(focusRecommendation([deadline("tomorrow", 1, 10), deadline("next-month", 30, 100)], now)?.id, "tomorrow");
+  assert.equal(focusRecommendation([deadline("overdue", -1, 5), deadline("tomorrow", 1, 100)], now)?.id, "overdue");
+  assert.equal(focusRecommendation([deadline("lighter", 2, 10), deadline("heavier", 2, 40)], now)?.id, "heavier");
+  assert.equal(focusRecommendation([deadline("submitted", -2, 100, "SUBMITTED"), deadline("active", 4, 10)], now)?.id, "active");
+  assert.equal(focusRecommendation([deadline("submitted", -2, 100, "SUBMITTED"), deadline("completed", -3, 100, "COMPLETED")], now), null);
+});
+
+test("the retired Today route redirects to Dashboard", async () => {
+  const source = await readFile(new URL("../app/today/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /redirect\(["']\/dashboard["']\)/);
+});
+
+test("grade targets handle one and multiple remaining assessments", () => {
+  const one = calculateGradeTarget([{ title: "Coursework", weighting: 60, resultPercent: 96.6666666667 }, { title: "Final Exam", weighting: 40, resultPercent: null }], 80);
+  assert.equal(one.state, "REQUIRED");
+  if (one.state === "REQUIRED") { assert.ok(Math.abs(one.knownContribution - 58) < 0.0001); assert.ok(Math.abs(one.requiredPercent - 55) < 0.0001); assert.deepEqual(one.remainingAssessments, [{ title: "Final Exam", weighting: 40 }]); }
+  const multiple = calculateGradeTarget([{ title: "Recorded", weighting: 40, resultPercent: 50 }, { title: "Project", weighting: 20, resultPercent: null }, { title: "Exam", weighting: 40, resultPercent: null }], 60);
+  assert.equal(multiple.state, "REQUIRED");
+  if (multiple.state === "REQUIRED") { assert.equal(multiple.remainingWeighting, 60); assert.ok(Math.abs(multiple.requiredPercent - 66.6666666667) < 0.0001); }
+});
+
+test("grade targets handle secured, impossible, absent, and incomplete weighting", () => {
+  assert.equal(calculateGradeTarget([{ weighting: 70, resultPercent: 100 }, { weighting: 30, resultPercent: null }], 60).state, "SECURED");
+  assert.equal(calculateGradeTarget([{ weighting: 80, resultPercent: 50 }, { weighting: 20, resultPercent: null }], 70).state, "IMPOSSIBLE");
+  assert.equal(calculateGradeTarget([{ weighting: 100, resultPercent: 50 }], 60).state, "NO_REMAINING");
+  assert.equal(calculateGradeTarget([{ weighting: 80, resultPercent: null }], 60).incomplete, true);
+  assert.equal(calculateGradeTarget([{ weighting: 80, resultPercent: null }, { weighting: 30, resultPercent: null }], 60).state, "INVALID_WEIGHTING");
+});
+
+test("grade targets support zero, full, and decimal results, weights, and targets", () => {
+  const zero = calculateGradeTarget([{ weighting: 50, resultPercent: 0 }, { weighting: 50, resultPercent: null }], 40);
+  assert.equal(zero.state, "REQUIRED");
+  if (zero.state === "REQUIRED") assert.equal(zero.requiredPercent, 80);
+  assert.equal(calculateGradeTarget([{ weighting: 50, resultPercent: 100 }, { weighting: 50, resultPercent: null }], 50).state, "SECURED");
+  const decimal = calculateGradeTarget([{ weighting: 37.5, resultPercent: 72.5 }, { weighting: 62.5, resultPercent: null }], 68.5);
+  assert.equal(decimal.state, "REQUIRED");
+  if (decimal.state === "REQUIRED") assert.ok(Math.abs(decimal.requiredPercent - 66.1) < 0.0001);
 });
 
 test("semester timing clamps progress and reports week numbers", () => {

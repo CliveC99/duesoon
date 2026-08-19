@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { decryptTimetableUrl, encryptTimetableUrl } from "../lib/timetable-crypto.ts";
 import { parseTimetableFeed, timetableEventIdentity, timetableReconciliation } from "../lib/timetable-parser.ts";
-import { nextTimetableEvent, timetableDisplayState, timetableEventsForIrishDay } from "../lib/timetable.ts";
+import { nextTimetableEvent, timetableAgendaItems, timetableDisplayState, timetableEventsForIrishDay } from "../lib/timetable.ts";
 import { isPublicAddress, normaliseTimetableUrl, TimetableUrlError, validateResolvedAddresses } from "../lib/timetable-url.ts";
 import { formatIrishTime, irishDateKey } from "../lib/formatting.ts";
 
@@ -82,4 +82,18 @@ test("today and next-class helpers group by Europe/Dublin", () => {
   assert.equal(irishDateKey(events[0].startAt), "2026-07-01");
   assert.equal(timetableEventsForIrishDay(events, new Date("2026-06-30T23:30:00Z")).length, 2);
   assert.equal(nextTimetableEvent(events, new Date("2026-07-01T10:00:00Z"))?.id, "b");
+  assert.equal(nextTimetableEvent(events, new Date("2026-07-01T14:00:00Z")), null);
+  assert.equal(timetableEventsForIrishDay([], new Date("2026-07-01T10:00:00Z")).length, 0);
+});
+
+test("timetable breaks use the 30-minute threshold and compact duration labels", () => {
+  const event = (id: string, start: string, end: string, status?: string) => ({ id, startAt: new Date(start), endAt: new Date(end), status });
+  const breakLabels = (...events: ReturnType<typeof event>[]) => timetableAgendaItems(events).filter((item) => item.kind === "break").map((item) => item.label);
+  assert.deepEqual(breakLabels(event("a", "2026-08-20T09:00:00Z", "2026-08-20T10:00:00Z"), event("b", "2026-08-20T10:00:00Z", "2026-08-20T11:00:00Z")), []);
+  assert.deepEqual(breakLabels(event("a", "2026-08-20T09:00:00Z", "2026-08-20T10:00:00Z"), event("b", "2026-08-20T10:15:00Z", "2026-08-20T11:00:00Z")), []);
+  assert.deepEqual(breakLabels(event("b", "2026-08-20T10:30:00Z", "2026-08-20T11:00:00Z"), event("a", "2026-08-20T09:00:00Z", "2026-08-20T10:00:00Z")), ["30 min break"]);
+  assert.deepEqual(breakLabels(event("a", "2026-08-20T09:00:00Z", "2026-08-20T10:00:00Z"), event("b", "2026-08-20T11:00:00Z", "2026-08-20T12:00:00Z")), ["1h break"]);
+  assert.deepEqual(breakLabels(event("a", "2026-08-20T09:00:00Z", "2026-08-20T10:00:00Z"), event("b", "2026-08-20T12:30:00Z", "2026-08-20T13:00:00Z")), ["2h 30m break"]);
+  assert.deepEqual(breakLabels(event("a", "2026-08-20T09:00:00Z", "2026-08-20T11:00:00Z"), event("b", "2026-08-20T10:00:00Z", "2026-08-20T12:00:00Z")), []);
+  assert.deepEqual(breakLabels(event("cancelled", "2026-08-20T10:30:00Z", "2026-08-20T11:00:00Z", "CANCELLED"), event("a", "2026-08-20T09:00:00Z", "2026-08-20T10:00:00Z")), []);
 });

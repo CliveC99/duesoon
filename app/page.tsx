@@ -7,7 +7,9 @@ import { DeadlineStatus, DeadlineType } from "@prisma/client";
 import { updateDeadlineStatus } from "@/app/data-actions";
 import { signOutUser } from "@/app/auth-actions";
 import { DeadlineStatusControl } from "@/app/components/deadline-controls";
+import { DesktopNavigation } from "@/app/components/desktop-navigation";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
+import { SignOutButton } from "@/app/components/sign-out-button";
 import { UserReminderCentre } from "@/app/components/user-reminder-centre";
 import { auth } from "@/auth";
 import { formatEnum, formatIrishDate, formatIrishDateParts, formatIrishTime } from "@/lib/formatting";
@@ -80,17 +82,10 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
       <header className="site-header">
         <div className="shell flex h-16 items-center justify-between">
           <a className="brand" href="/dashboard" aria-label="DueSoon home"><span className="brand-mark"><Icon name="clock" className="size-[18px]" /></span><span>DueSoon</span></a>
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
-            <a className="nav-link nav-active" href="#overview"><Icon name="grid" />Overview</a>
-            <a className="nav-link" href="#deadlines"><Icon name="calendar" />Deadlines</a>
-            <Link className="nav-link" href="/calendar"><Icon name="calendar" />Calendar</Link>
-            <Link className="nav-link" href="/semesters"><Icon name="clock" />Semesters</Link>
-            <Link className="nav-link" href="/groups"><Icon name="grid" />Groups</Link>
-          </nav>
+          <DesktopNavigation />
           <div className="header-end"><UserReminderCentre /><div className="desktop-header-actions">
-            <Link className="add-button" href="/deadlines/new"><Icon name="plus" className="size-4" /><span>Add deadline</span></Link>
             <div className="account-area">
-              <div className="account-copy"><Link href="/profile"><strong>{displayName}</strong></Link><form action={signOutUser}><button>Sign out</button></form></div>
+              <div className="account-copy"><Link href="/profile"><strong>{displayName}</strong></Link><form action={signOutUser}><SignOutButton /></form></div>
               <Link className="avatar" href="/profile" aria-label={`${displayName}'s profile settings`}>{initials(user)}</Link>
             </div>
           </div><MobileNavigation /></div>
@@ -123,8 +118,8 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
         {recentDeadlines.length > 0 && <details className="recent-work"><summary><span>Recently submitted or completed</span><small>{recentDeadlines.length} {recentDeadlines.length === 1 ? "deadline" : "deadlines"}</small></summary><div className="deadline-list">{recentDeadlines.map((item) => <DeadlineRow key={item.id} item={item} renderedAt={renderedAt} finished />)}</div></details>}
 
         <section className="summary-grid" aria-label="Semester summary">
-          <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Active</span><strong>{activeDeadlines.length} deadlines</strong></div></article>
-          <article><div className="summary-icon green"><Icon name="trend" /></div><div><span>Completed</span><strong>{completedCount} assessments</strong></div></article>
+          <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Active</span><strong>{activeDeadlines.length} {activeDeadlines.length === 1 ? "deadline" : "deadlines"}</strong></div></article>
+          <article><div className="summary-icon green"><Icon name="trend" /></div><div><span>Completed</span><strong>{completedCount} {completedCount === 1 ? "assessment" : "assessments"}</strong></div></article>
           <article><div className="summary-icon amber"><Icon name="clock" /></div><div><span>Modules</span><strong>{moduleCount} active</strong></div></article>
         </section>
       </main>

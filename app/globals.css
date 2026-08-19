@@ -98,3 +98,13 @@ h1 { font-size:clamp(28px,4vw,38px); line-height:1.15; font-weight:680; letter-s
 .profile-sections { display:grid; gap:14px; max-width:900px; }.profile-section { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr); gap:36px; padding:27px 28px; border:1px solid var(--line); border-radius:16px; background:var(--surface); }.profile-section-copy h2 { font-size:17px; font-weight:670; }.profile-section-copy>p:last-child { max-width:300px; margin-top:7px; color:var(--muted); font-size:10px; line-height:1.55; }.profile-form { display:grid; align-content:start; }.profile-form label { margin:15px 0 7px; font-size:11px; font-weight:650; }.profile-form label:first-child { margin-top:0; }.profile-form input { width:100%; height:42px; border:1px solid var(--line); border-radius:9px; outline:0; padding:0 12px; color:var(--foreground); background:var(--background); font:inherit; font-size:12px; }.profile-form input:focus { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 13%,transparent); }.profile-form input[aria-invalid=true] { border-color:#c65a5a; }.profile-form .auth-submit { justify-self:start; min-width:130px; padding-inline:17px; }.form-success { margin-top:14px; padding:9px 10px; border:1px solid color-mix(in srgb,#3aa36d 35%,var(--line)); border-radius:8px; color:#27744c; background:color-mix(in srgb,#3aa36d 9%,var(--surface)); font-size:10px; }
 @media (prefers-color-scheme:dark) { .form-success { color:#89d5aa; } }
 @media (max-width:700px) { .profile-section { grid-template-columns:1fr; gap:20px; padding:22px 18px; }.profile-section-copy>p:last-child { max-width:none; }.profile-form .auth-submit { width:100%; } }
+
+/* Shared navigation and release-polish states. */
+.manage-nav { gap:3px; font-size:11px; }
+.manage-nav a { padding-inline:8px; }
+.manage-nav a:hover,.manage-nav a:focus-visible,.manage-nav a[aria-current=page] { outline:0; color:var(--foreground); background:var(--surface); }
+.manage-nav .manage-nav-add { color:#fff; background:var(--accent); }
+.manage-nav .manage-nav-add:hover,.manage-nav .manage-nav-add:focus-visible,.manage-nav .manage-nav-add[aria-current=page] { color:#fff; background:var(--accent-dark); }
+.not-found-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:9px; }
+.account-copy button:disabled,.mobile-navigation-panel>form button:disabled { cursor:wait; opacity:.65; }
+@media (max-width:980px) { .manage-nav,.desktop-account,.desktop-header-actions { display:none; }.mobile-navigation { display:block; } }

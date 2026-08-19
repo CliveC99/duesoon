@@ -75,16 +75,24 @@ nano .env
 
 Replace every placeholder. `POSTGRES_PASSWORD` and the password embedded in `DATABASE_URL` must represent the same value; URL-encode reserved characters in the connection string. Generate `AUTH_SECRET` with `npx auth secret` on a trusted machine. The populated `.env` is ignored by Git and must remain only on the server.
 
-Build the Linux images, apply all committed migrations, and start the stack:
+Validate the resolved Compose configuration before starting anything. This catches missing variables and configuration errors without creating containers:
+
+```bash
+docker compose config
+```
+
+Then build the Linux images, start PostgreSQL, wait for it to report healthy, apply all committed migrations, and start the app:
 
 ```bash
 docker compose build
+docker compose up -d duesoon-db
+docker compose ps
 docker compose run --rm duesoon-migrate
 docker compose up -d duesoon-app
 docker compose ps
 ```
 
-The final command also starts PostgreSQL. The migration command is safe to repeat: Prisma applies only migrations that have not already been recorded. The app health check calls `/api/health`, which verifies database connectivity without returning credentials or internal error details.
+Do not continue to the migration step until `duesoon-db` is healthy. The migration command is safe to repeat: Prisma applies only migrations that have not already been recorded. The app health check calls `/api/health`, which verifies database connectivity without returning credentials or internal error details. After startup, confirm the endpoint through HTTPS at `https://duesoon.example.ie/api/health`; a healthy response is `{"status":"ok"}`.
 
 View status and logs with:
 
@@ -145,6 +153,33 @@ docker compose up -d duesoon-app
 ```
 
 The database recreation command is destructive. Verify the backup filename, the Compose project, and the target server before running it. The named volume survives ordinary container replacement and `docker compose down`; never use `docker compose down --volumes` unless permanent database deletion is intended and a verified backup exists.
+
+### Safe shutdown
+
+Stop the stack cleanly with:
+
+```bash
+docker compose down
+```
+
+`docker compose down` removes the containers and Compose network but preserves the named `duesoon-db-data` database volume. `docker compose down -v` (or `docker compose down --volumes`) deletes that database volume and its data. Do not use `-v` in production unless permanent deletion is intentional and a verified backup exists.
+
+### Checklist before first public exposure
+
+- [ ] `POSTGRES_PASSWORD` is long, random, and unique.
+- [ ] `AUTH_SECRET` is strong and generated for production.
+- [ ] HTTPS is enabled with a valid certificate.
+- [ ] The reverse proxy is configured with trusted forwarded headers.
+- [ ] PostgreSQL port 5432 is not publicly exposed.
+- [ ] The app is reachable publicly only through the reverse proxy.
+- [ ] A database backup has completed and been copied off the Mini PC.
+- [ ] A restore has been tested successfully.
+- [ ] `prisma migrate deploy` has applied all committed migrations.
+- [ ] `/api/health` is healthy through the public HTTPS address.
+- [ ] Account creation and sign-in have been tested.
+- [ ] A second account cannot access the first account’s private records.
+- [ ] Core pages and navigation have been tested at approximately 390px wide.
+- [ ] `npm audit --omit=dev` reports no production vulnerabilities.
 
 ### Operational notes
 

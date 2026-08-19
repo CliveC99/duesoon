@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { AuthError } from "next-auth";
 
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { signInSchema, signUpSchema } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
 
@@ -59,4 +59,8 @@ export async function register(
   }
 
   return {};
+}
+
+export async function signOutUser() {
+  await signOut({ redirectTo: "/sign-in" });
 }

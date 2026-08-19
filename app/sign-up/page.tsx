@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { SignUpForm } from "@/app/components/auth-form";
 import { AuthShell } from "@/app/components/auth-shell";
 import { auth } from "@/auth";
+
+export const metadata: Metadata = {
+  title: "Sign Up",
+};
 
 export default async function SignUpPage() {
   if (await auth()) redirect("/dashboard");

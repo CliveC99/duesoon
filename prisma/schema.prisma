@@ -16,8 +16,59 @@ model User {
   passwordHash  String?
   accounts      Account[]
   sessions      Session[]
+  modules       Module[]
+  deadlines     Deadline[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Module {
+  id        String     @id @default(cuid())
+  userId    String
+  name      String
+  code      String?
+  colour    String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deadlines Deadline[]
+
+  @@unique([id, userId])
+  @@index([userId])
+}
+
+model Deadline {
+  id        String         @id @default(cuid())
+  userId    String
+  moduleId  String
+  title     String
+  type      DeadlineType
+  dueAt     DateTime
+  weighting Int?
+  status    DeadlineStatus @default(NOT_STARTED)
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module    Module         @relation(fields: [moduleId, userId], references: [id, userId], onDelete: Restrict)
+
+  @@index([userId, dueAt])
+  @@index([moduleId, userId])
+}
+
+enum DeadlineType {
+  ASSIGNMENT
+  EXAM
+  QUIZ
+  PROJECT
+  OTHER
+}
+
+enum DeadlineStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
 }
 
 model Account {

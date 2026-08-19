@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DueSoon — Stay ahead of every deadline",
+  title: {
+    default: "DueSoon",
+    template: "DueSoon - %s",
+  },
   description: "A focused college deadline and exam tracker.",
 };
 

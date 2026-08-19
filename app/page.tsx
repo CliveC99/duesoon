@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { DeadlineStatus, DeadlineType } from "@prisma/client";
 
 import { updateDeadlineStatus } from "@/app/data-actions";
+import { signOutUser } from "@/app/auth-actions";
 import { DeadlineStatusControl } from "@/app/components/deadline-controls";
-import { auth, signOut } from "@/auth";
+import { MobileNavigation } from "@/app/components/mobile-navigation";
+import { auth } from "@/auth";
 import { formatEnum, formatIrishDate, formatIrishDateParts, formatIrishTime } from "@/lib/formatting";
 
 export const metadata: Metadata = {
@@ -75,15 +77,17 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
             <a className="nav-link nav-active" href="#overview"><Icon name="grid" />Overview</a>
             <a className="nav-link" href="#deadlines"><Icon name="calendar" />Deadlines</a>
+            <Link className="nav-link" href="/calendar"><Icon name="calendar" />Calendar</Link>
             <Link className="nav-link" href="/semesters"><Icon name="clock" />Semesters</Link>
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="desktop-header-actions">
             <Link className="add-button" href="/deadlines/new"><Icon name="plus" className="size-4" /><span>Add deadline</span></Link>
             <div className="account-area">
-              <div className="account-copy"><strong>{displayName}</strong><form action={async () => { "use server"; await signOut({ redirectTo: "/sign-in" }); }}><button>Sign out</button></form></div>
+              <div className="account-copy"><strong>{displayName}</strong><form action={signOutUser}><button>Sign out</button></form></div>
               <div className="avatar" aria-label={`${displayName}'s account`}>{initials(user)}</div>
             </div>
           </div>
+          <MobileNavigation />
         </div>
       </header>
 

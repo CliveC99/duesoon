@@ -49,7 +49,7 @@ function timeLabel(value: string) {
   return new Intl.DateTimeFormat("en-IE", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(2000, 0, 1, hour, minute));
 }
 
-export function DueDatePicker({ initialValue }: { initialValue?: Date }) {
+export function DueDatePicker({ initialValue, disabled = false }: { initialValue?: Date; disabled?: boolean }) {
   const initial = localParts(initialValue);
   const initialDate = parseLocalDate(initial.date) ?? new Date();
   const [date, setDate] = useState(initial.date);
@@ -76,9 +76,8 @@ export function DueDatePicker({ initialValue }: { initialValue?: Date }) {
   function shortcut(offset: number) { chooseDate(dateFromOffset(offset)); }
 
   return (
-    <fieldset className="due-picker" onKeyDown={(event) => { if (event.key === "Escape") setOpen(null); }} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(null); }}>
+    <><input type="hidden" name="dueAt" value={isoValue} /><fieldset className="due-picker" disabled={disabled} onKeyDown={(event) => { if (event.key === "Escape") setOpen(null); }} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(null); }}>
       <legend>Due date and time</legend>
-      <input type="hidden" name="dueAt" value={isoValue} />
       <div className="due-picker-fields">
         <div className="picker-control">
           <label id={`${dateId}-label`} htmlFor={dateId}>Date</label>
@@ -96,6 +95,6 @@ export function DueDatePicker({ initialValue }: { initialValue?: Date }) {
       </div>
       <div className="date-shortcuts" aria-label="Quick due date choices"><span>Quick select</span><button type="button" onClick={() => shortcut(0)}>Today</button><button type="button" onClick={() => shortcut(1)}>Tomorrow</button><button type="button" onClick={() => shortcut(7)}>In 1 week</button><button type="button" onClick={() => shortcut(14)}>In 2 weeks</button></div>
       <output className="due-summary" aria-live="polite"><span aria-hidden="true">✓</span><div><small>Selected deadline</small><strong suppressHydrationWarning>{readable}</strong></div></output>
-    </fieldset>
+    </fieldset></>
   );
 }

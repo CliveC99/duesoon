@@ -1,12 +1,12 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
-import { hash } from "bcryptjs";
 import { AuthError } from "next-auth";
 
 import { signIn, signOut } from "@/auth";
 import { signInSchema, signUpSchema } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/lib/passwords";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 
 export type AuthActionState = { error?: string };
 
@@ -40,12 +40,12 @@ export async function register(
   }
 
   const { name, email, password } = parsed.data;
-  const passwordHash = await hash(password, 12);
+  const passwordHash = await hashPassword(password);
 
   try {
     await prisma.user.create({ data: { name, email, passwordHash } });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (isUniqueConstraintError(error)) {
       return { error: "An account with this email already exists." };
     }
     throw error;

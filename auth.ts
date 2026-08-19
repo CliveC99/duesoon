@@ -1,10 +1,10 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { compare } from "bcryptjs";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import { signInSchema } from "@/lib/auth-validation";
 import { prisma } from "@/lib/prisma";
+import { verifyPassword } from "@/lib/passwords";
 
 const DUMMY_PASSWORD_HASH = "$2b$12$Y9xUNM.QOc.ZF1UsKloEPeVokXaDgYMTgTiIcTnxIUTXPmtTW/.aq";
 
@@ -25,7 +25,7 @@ export const { handlers, auth, signIn, signOut, unstable_update: updateSession }
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
         });
-        const passwordMatches = await compare(
+        const passwordMatches = await verifyPassword(
           parsed.data.password,
           user?.passwordHash ?? DUMMY_PASSWORD_HASH,
         );
@@ -60,7 +60,7 @@ export const { handlers, auth, signIn, signOut, unstable_update: updateSession }
       const isAuthenticated = Boolean(session?.user);
       const path = request.nextUrl.pathname;
 
-      if (["/dashboard", "/modules", "/deadlines", "/profile"].some((route) => path.startsWith(route))) return isAuthenticated;
+      if (["/dashboard", "/calendar", "/modules", "/semesters", "/deadlines", "/groups", "/profile"].some((route) => path.startsWith(route))) return isAuthenticated;
       if (isAuthenticated && (path === "/sign-in" || path === "/sign-up")) {
         return Response.redirect(new URL("/dashboard", request.nextUrl));
       }

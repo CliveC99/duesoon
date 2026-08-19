@@ -1,6 +1,6 @@
 import type { DeadlineStatus } from "@prisma/client";
 
-import { irishDateKey } from "@/lib/formatting";
+import { irishDateKey } from "./formatting.ts";
 
 export const REMINDER_OPTIONS = [
   { value: "", label: "No reminder" },

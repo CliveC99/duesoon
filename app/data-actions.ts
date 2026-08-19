@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { deadlineResultSchema, deadlineSchema, moduleSchema, semesterSchema, statusSchema } from "@/lib/data-validation";
+import { linkedPersonalFields, ownedRecordWhere } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 
@@ -29,7 +30,7 @@ export async function updateModule(id: string, _state: DataActionState, formData
   const parsed = moduleSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   if (!await ownedSemesterExists(parsed.data.semesterId, userId)) return { error: "Choose one of your semesters." };
-  const result = await prisma.module.updateMany({ where: { id, userId }, data: parsed.data });
+  const result = await prisma.module.updateMany({ where: ownedRecordWhere(id, userId), data: parsed.data });
   if (result.count !== 1) return { error: "Module not found." };
   revalidatePath("/modules"); revalidatePath("/dashboard");
   redirect("/modules");
@@ -38,10 +39,10 @@ export async function updateModule(id: string, _state: DataActionState, formData
 export async function deleteModule(id: string, _state: DataActionState, _formData: FormData): Promise<DataActionState> {
   void _state; void _formData;
   const userId = await requireUserId();
-  const moduleRecord = await prisma.module.findFirst({ where: { id, userId }, select: { _count: { select: { deadlines: true } } } });
+  const moduleRecord = await prisma.module.findFirst({ where: ownedRecordWhere(id, userId), select: { _count: { select: { deadlines: true } } } });
   if (!moduleRecord) return { error: "Module not found." };
   if (moduleRecord._count.deadlines > 0) return { error: "Delete or move this module’s deadlines first." };
-  await prisma.module.deleteMany({ where: { id, userId } });
+  await prisma.module.deleteMany({ where: ownedRecordWhere(id, userId) });
   revalidatePath("/modules");
   redirect("/modules");
 }
@@ -61,7 +62,7 @@ function semesterValidationError(formData: FormData, error: { flatten: () => { f
 }
 
 async function ownedSemesterExists(semesterId: string, userId: string) {
-  return Boolean(await prisma.semester.findFirst({ where: { id: semesterId, userId }, select: { id: true } }));
+  return Boolean(await prisma.semester.findFirst({ where: ownedRecordWhere(semesterId, userId), select: { id: true } }));
 }
 
 export async function createSemester(_state: DataActionState, formData: FormData): Promise<DataActionState> {
@@ -82,7 +83,7 @@ export async function updateSemester(id: string, _state: DataActionState, formDa
   if (!parsed.success) return semesterValidationError(formData, parsed.error);
   const result = await prisma.$transaction(async (transaction) => {
     if (parsed.data.isActive) await transaction.semester.updateMany({ where: { userId, isActive: true, id: { not: id } }, data: { isActive: false } });
-    return transaction.semester.updateMany({ where: { id, userId }, data: parsed.data });
+    return transaction.semester.updateMany({ where: ownedRecordWhere(id, userId), data: parsed.data });
   });
   if (result.count !== 1) return { error: "Semester not found." };
   revalidatePath("/semesters"); revalidatePath("/modules"); revalidatePath("/dashboard");
@@ -92,11 +93,11 @@ export async function updateSemester(id: string, _state: DataActionState, formDa
 export async function setActiveSemester(id: string, _state: DataActionState, _formData: FormData): Promise<DataActionState> {
   void _state; void _formData;
   const userId = await requireUserId();
-  const semester = await prisma.semester.findFirst({ where: { id, userId }, select: { id: true } });
+  const semester = await prisma.semester.findFirst({ where: ownedRecordWhere(id, userId), select: { id: true } });
   if (!semester) return { error: "Semester not found." };
   await prisma.$transaction([
     prisma.semester.updateMany({ where: { userId, isActive: true }, data: { isActive: false } }),
-    prisma.semester.updateMany({ where: { id, userId }, data: { isActive: true } }),
+    prisma.semester.updateMany({ where: ownedRecordWhere(id, userId), data: { isActive: true } }),
   ]);
   revalidatePath("/semesters"); revalidatePath("/dashboard");
   redirect("/semesters");
@@ -105,16 +106,16 @@ export async function setActiveSemester(id: string, _state: DataActionState, _fo
 export async function deleteSemester(id: string, _state: DataActionState, _formData: FormData): Promise<DataActionState> {
   void _state; void _formData;
   const userId = await requireUserId();
-  const semester = await prisma.semester.findFirst({ where: { id, userId }, select: { _count: { select: { modules: true } } } });
+  const semester = await prisma.semester.findFirst({ where: ownedRecordWhere(id, userId), select: { _count: { select: { modules: true } } } });
   if (!semester) return { error: "Semester not found." };
   if (semester._count.modules > 0) return { error: "Move or delete this semester’s modules first." };
-  await prisma.semester.deleteMany({ where: { id, userId } });
+  await prisma.semester.deleteMany({ where: ownedRecordWhere(id, userId) });
   revalidatePath("/semesters"); revalidatePath("/dashboard");
   redirect("/semesters");
 }
 
 async function ownedModuleExists(moduleId: string, userId: string) {
-  return Boolean(await prisma.module.findFirst({ where: { id: moduleId, userId }, select: { id: true } }));
+  return Boolean(await prisma.module.findFirst({ where: ownedRecordWhere(moduleId, userId), select: { id: true } }));
 }
 
 export async function createDeadline(_state: DataActionState, formData: FormData): Promise<DataActionState> {
@@ -132,15 +133,10 @@ export async function updateDeadline(id: string, _state: DataActionState, formDa
   const parsed = deadlineSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   if (!await ownedModuleExists(parsed.data.moduleId, userId)) return { error: "Choose one of your modules." };
-  const existing = await prisma.deadline.findFirst({ where: { id, userId }, select: { sharedDeadlineId: true } });
+  const existing = await prisma.deadline.findFirst({ where: ownedRecordWhere(id, userId), select: { sharedDeadlineId: true } });
   if (!existing) return { error: "Deadline not found." };
-  const data = existing.sharedDeadlineId ? {
-    moduleId: parsed.data.moduleId,
-    reminderDaysBefore: parsed.data.reminderDaysBefore,
-    status: parsed.data.status,
-    notes: parsed.data.notes,
-  } : parsed.data;
-  const result = await prisma.deadline.updateMany({ where: { id, userId }, data });
+  const data = existing.sharedDeadlineId ? linkedPersonalFields(parsed.data) : parsed.data;
+  const result = await prisma.deadline.updateMany({ where: ownedRecordWhere(id, userId), data });
   if (result.count !== 1) return { error: "Deadline not found." };
   revalidatePath("/dashboard");
   redirect("/dashboard");
@@ -149,7 +145,7 @@ export async function updateDeadline(id: string, _state: DataActionState, formDa
 export async function deleteDeadline(id: string, _state: DataActionState, _formData: FormData): Promise<DataActionState> {
   void _state; void _formData;
   const userId = await requireUserId();
-  const result = await prisma.deadline.deleteMany({ where: { id, userId } });
+  const result = await prisma.deadline.deleteMany({ where: ownedRecordWhere(id, userId) });
   if (result.count !== 1) return { error: "Deadline not found." };
   revalidatePath("/dashboard");
   redirect("/dashboard");
@@ -159,7 +155,7 @@ export async function updateDeadlineStatus(formData: FormData) {
   const userId = await requireUserId();
   const parsed = statusSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return;
-  await prisma.deadline.updateMany({ where: { id: parsed.data.id, userId }, data: { status: parsed.data.status } });
+  await prisma.deadline.updateMany({ where: ownedRecordWhere(parsed.data.id, userId), data: { status: parsed.data.status } });
   revalidatePath("/dashboard");
 }
 
@@ -168,12 +164,12 @@ export async function updateDeadlineResult(id: string, _state: DataActionState, 
   const parsed = deadlineResultSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
 
-  const deadline = await prisma.deadline.findFirst({ where: { id, userId }, select: { moduleId: true } });
+  const deadline = await prisma.deadline.findFirst({ where: ownedRecordWhere(id, userId), select: { moduleId: true } });
   if (!deadline) return { error: "Deadline not found." };
 
   const resultPercent = parsed.data.resultPercent;
   const result = await prisma.deadline.updateMany({
-    where: { id, userId },
+    where: ownedRecordWhere(id, userId),
     data: {
       resultPercent,
       resultRecordedAt: resultPercent === null ? null : new Date(),

@@ -1,20 +1,34 @@
 "use client";
 
 import { DeadlineStatus, DeadlineType } from "@prisma/client";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import type { DataActionState } from "@/app/data-actions";
 import { DueDatePicker } from "@/app/components/due-date-picker";
+import { SemesterDatePicker } from "@/app/components/semester-date-picker";
 import { formatEnum } from "@/lib/formatting";
 
 type FormAction = (state: DataActionState, formData: FormData) => Promise<DataActionState>;
 type ModuleOption = { id: string; name: string; code: string | null; colour: string };
+type SemesterOption = { id: string; name: string; academicYear: string; isActive: boolean };
 
 const initialState: DataActionState = {};
 
-export function ModuleForm({ action, initial }: { action: FormAction; initial?: { name: string; code: string | null; colour: string } }) {
+export function ModuleForm({ action, semesters, initial }: { action: FormAction; semesters: SemesterOption[]; initial?: { name: string; code: string | null; colour: string; semesterId: string | null } }) {
   const [state, formAction, pending] = useActionState(action, initialState);
-  return <form action={formAction} className="data-form"><label htmlFor="name">Module name</label><input id="name" name="name" defaultValue={initial?.name} placeholder="Machine Learning" maxLength={100} required /><label htmlFor="code">Module code <span>Optional</span></label><input id="code" name="code" defaultValue={initial?.code ?? ""} placeholder="CS4012" maxLength={20} /><label htmlFor="colour">Module colour</label><div className="colour-field"><input id="colour" name="colour" type="color" defaultValue={initial?.colour ?? "#6558d9"} /><span>Used on deadline tags and cards</span></div>{state.error && <p className="auth-error" role="alert">{state.error}</p>}<button className="auth-submit" disabled={pending}>{pending ? "Saving…" : initial ? "Save changes" : "Create module"}</button></form>;
+  return <form action={formAction} className="data-form"><label htmlFor="semesterId">Semester</label><select id="semesterId" name="semesterId" defaultValue={initial?.semesterId ?? semesters.find((semester) => semester.isActive)?.id ?? ""} required><option value="" disabled>Select a semester</option>{semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name} · {semester.academicYear}{semester.isActive ? " (Active)" : ""}</option>)}</select><label htmlFor="name">Module name</label><input id="name" name="name" defaultValue={initial?.name} placeholder="Machine Learning" maxLength={100} required /><label htmlFor="code">Module code <span>Optional</span></label><input id="code" name="code" defaultValue={initial?.code ?? ""} placeholder="CS4012" maxLength={20} /><label htmlFor="colour">Module colour</label><div className="colour-field"><input id="colour" name="colour" type="color" defaultValue={initial?.colour ?? "#6558d9"} /><span>Used on deadline tags and cards</span></div>{state.error && <p className="auth-error" role="alert">{state.error}</p>}<button className="auth-submit" disabled={pending}>{pending ? "Saving…" : initial ? "Save changes" : "Create module"}</button></form>;
+}
+
+export function SemesterForm({ action, initial }: { action: FormAction; initial?: { name: string; academicYear: string; startDate: Date; endDate: Date; isActive: boolean } }) {
+  const [state, formAction, pending] = useActionState(action, initialState);
+  const [name, setName] = useState(initial?.name ?? "Semester 1");
+  const [academicYear, setAcademicYear] = useState(initial?.academicYear ?? "");
+  const [startDate, setStartDate] = useState(initial ? dateInputValue(initial.startDate) : "");
+  const [endDate, setEndDate] = useState(initial ? dateInputValue(initial.endDate) : "");
+  const [isActive, setIsActive] = useState(initial?.isActive ?? false);
+
+  const errors = state.fieldErrors;
+  return <form action={formAction} className="data-form" noValidate><div className="form-grid"><div><label htmlFor="semester-name">Semester</label><select id="semester-name" name="name" value={name} onChange={(event) => setName(event.target.value)} aria-invalid={errors?.name ? true : undefined} aria-describedby={errors?.name ? "semester-name-error" : undefined}><option>Semester 1</option><option>Semester 2</option></select>{errors?.name && <p className="field-error" id="semester-name-error" role="alert">{errors.name[0]}</p>}</div><div><label htmlFor="academicYear">Academic year</label><input id="academicYear" name="academicYear" value={academicYear} onChange={(event) => setAcademicYear(event.target.value)} placeholder="2026/27" inputMode="numeric" maxLength={7} required aria-invalid={errors?.academicYear ? true : undefined} aria-describedby={`academic-year-help${errors?.academicYear ? " academic-year-error" : ""}`} /><p className="form-helper" id="academic-year-help">Enter the academic year in YYYY/YY format, for example 2026/27.</p>{errors?.academicYear && <p className="field-error" id="academic-year-error" role="alert">{errors.academicYear[0]}</p>}</div></div><SemesterDatePicker startDate={startDate} endDate={endDate} onStartDateChange={setStartDate} onEndDateChange={setEndDate} errors={{ startDate: errors?.startDate, endDate: errors?.endDate }} /><label className="checkbox-field"><input name="isActive" type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} /><span><strong>Set as active semester</strong><small>This will replace the currently active semester.</small></span></label>{state.error && <p className="auth-error" role="alert">{state.error}</p>}<button className="auth-submit" disabled={pending}>{pending ? "Saving…" : initial ? "Save changes" : "Create semester"}</button></form>;
 }
 
 export function DeadlineForm({ action, modules, initial }: { action: FormAction; modules: ModuleOption[]; initial?: { title: string; moduleId: string; type: DeadlineType; dueAt: Date; weighting: number | null; status: DeadlineStatus; notes: string | null } }) {
@@ -25,4 +39,13 @@ export function DeadlineForm({ action, modules, initial }: { action: FormAction;
 export function DeleteForm({ action, label }: { action: FormAction; label: string }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   return <form action={formAction} className="delete-form"><button disabled={pending}>{pending ? "Deleting…" : label}</button>{state.error && <p className="auth-error" role="alert">{state.error}</p>}</form>;
+}
+
+export function ActionForm({ action, label, pendingLabel = "Saving…" }: { action: FormAction; label: string; pendingLabel?: string }) {
+  const [state, formAction, pending] = useActionState(action, initialState);
+  return <form action={formAction} className="inline-action"><button disabled={pending}>{pending ? pendingLabel : label}</button>{state.error && <p className="auth-error" role="alert">{state.error}</p>}</form>;
+}
+
+function dateInputValue(date: Date) {
+  return date.toISOString().slice(0, 10);
 }

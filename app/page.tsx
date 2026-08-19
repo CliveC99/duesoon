@@ -28,6 +28,7 @@ function Icon({ name, className = "size-5" }: { name: IconName; className?: stri
 }
 
 export type DashboardDeadline = { id: string; title: string; type: DeadlineType; dueAt: Date; weighting: number | null; status: DeadlineStatus; notes: string | null; module: { name: string; code: string | null; colour: string } };
+export type SemesterOverview = { id: string; name: string; academicYear: string; startDate: Date; endDate: Date; phase: string; progress: number };
 
 function ModuleTag({ children, colour }: { children: React.ReactNode; colour?: string }) {
   return <span className="module-tag" style={colour ? { color: colour, backgroundColor: `${colour}18`, border: `1px solid ${colour}35` } : undefined}>{children}</span>;
@@ -57,7 +58,7 @@ function initials(user: User) {
   return source.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
-export function DashboardView({ user, activeDeadlines, recentDeadlines, deadlineCount, completedCount, moduleCount, renderedAt }: { user: User; activeDeadlines: DashboardDeadline[]; recentDeadlines: DashboardDeadline[]; deadlineCount: number; completedCount: number; moduleCount: number; renderedAt: number }) {
+export function DashboardView({ user, activeDeadlines, recentDeadlines, deadlineCount, completedCount, moduleCount, semester, renderedAt }: { user: User; activeDeadlines: DashboardDeadline[]; recentDeadlines: DashboardDeadline[]; deadlineCount: number; completedCount: number; moduleCount: number; semester: SemesterOverview | null; renderedAt: number }) {
   const displayName = user.name?.trim() || "Student";
   const next = activeDeadlines[0];
   const overdue = next ? next.dueAt.getTime() < renderedAt : false;
@@ -74,6 +75,7 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
             <a className="nav-link nav-active" href="#overview"><Icon name="grid" />Overview</a>
             <a className="nav-link" href="#deadlines"><Icon name="calendar" />Deadlines</a>
+            <Link className="nav-link" href="/semesters"><Icon name="clock" />Semesters</Link>
           </nav>
           <div className="flex items-center gap-3">
             <Link className="add-button" href="/deadlines/new"><Icon name="plus" className="size-4" /><span>Add deadline</span></Link>
@@ -87,8 +89,8 @@ export function DashboardView({ user, activeDeadlines, recentDeadlines, deadline
 
       <main id="overview" className="shell py-8 sm:py-11">
         <section className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div><p className="eyebrow">Semester 2 · Week 8</p><h1>Good morning, {displayName.split(" ")[0]}.</h1><p className="intro">Here’s what’s coming up across your modules.</p></div>
-          <div className="semester-pill"><span><Icon name="trend" /></span><div><strong>6 of 14 complete</strong><small>43% through semester</small></div></div>
+          <div><p className="eyebrow">{semester ? `${semester.name} · ${semester.academicYear} · ${semester.phase}` : "No active semester"}</p><h1>Good morning, {displayName.split(" ")[0]}.</h1><p className="intro">Here’s what’s coming up across your modules.</p></div>
+          {semester ? <Link className="semester-pill" href="/semesters" aria-label="Manage semesters"><span><Icon name="trend" /></span><div><strong>{completedCount} of {deadlineCount} complete</strong><small>{semester.progress}% through semester</small></div></Link> : <Link className="semester-pill semester-setup" href="/semesters/new"><span><Icon name="plus" /></span><div><strong>Set up your semester</strong><small>Add dates to track week and progress</small></div></Link>}
         </section>
 
         {next ? <section className="next-card" aria-labelledby="next-deadline-title">

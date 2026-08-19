@@ -3,7 +3,21 @@ import { z } from "zod";
 
 const optionalText = (max: number) => z.string().trim().max(max).transform((value) => value || null);
 
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.").transform((value) => new Date(`${value}T00:00:00.000Z`));
+
+export const semesterSchema = z.object({
+  name: z.enum(["Semester 1", "Semester 2"]),
+  academicYear: z.string().trim().regex(/^\d{4}\/\d{2}$/, "Enter the academic year in YYYY/YY format, for example 2026/27.").refine((value) => {
+    const [start, end] = value.split("/").map(Number);
+    return (start + 1) % 100 === end;
+  }, "The second year must be consecutive; for example, use 2026/27 rather than 2026/28."),
+  startDate: dateOnly,
+  endDate: dateOnly,
+  isActive: z.preprocess((value) => value === "on" || value === "true", z.boolean()),
+}).refine((value) => value.endDate >= value.startDate, { message: "End date must be on or after the start date.", path: ["endDate"] });
+
 export const moduleSchema = z.object({
+  semesterId: z.string().cuid("Choose a valid semester."),
   name: z.string().trim().min(2, "Module name must be at least 2 characters.").max(100),
   code: optionalText(20),
   colour: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Choose a valid colour."),

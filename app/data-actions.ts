@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { deadlineSchema, moduleSchema, semesterSchema, statusSchema } from "@/lib/data-validation";
+import { deadlineResultSchema, deadlineSchema, moduleSchema, semesterSchema, statusSchema } from "@/lib/data-validation";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 
@@ -153,4 +153,28 @@ export async function updateDeadlineStatus(formData: FormData) {
   if (!parsed.success) return;
   await prisma.deadline.updateMany({ where: { id: parsed.data.id, userId }, data: { status: parsed.data.status } });
   revalidatePath("/dashboard");
+}
+
+export async function updateDeadlineResult(id: string, _state: DataActionState, formData: FormData): Promise<DataActionState> {
+  const userId = await requireUserId();
+  const parsed = deadlineResultSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstError(parsed.error) };
+
+  const deadline = await prisma.deadline.findFirst({ where: { id, userId }, select: { moduleId: true } });
+  if (!deadline) return { error: "Deadline not found." };
+
+  const resultPercent = parsed.data.resultPercent;
+  const result = await prisma.deadline.updateMany({
+    where: { id, userId },
+    data: {
+      resultPercent,
+      resultRecordedAt: resultPercent === null ? null : new Date(),
+    },
+  });
+  if (result.count !== 1) return { error: "Deadline not found." };
+
+  revalidatePath("/modules");
+  revalidatePath(`/modules/${deadline.moduleId}`);
+  revalidatePath("/dashboard");
+  return { };
 }

@@ -44,3 +44,10 @@ export const statusSchema = z.object({
   id: z.string().cuid(),
   status: z.nativeEnum(DeadlineStatus),
 });
+
+export const deadlineResultSchema = z.object({
+  resultPercent: z.string().trim().transform((value) => value === "" ? null : Number(value)).refine(
+    (value) => value === null || (Number.isFinite(value) && value >= 0 && value <= 100),
+    "Result must be a percentage from 0 to 100.",
+  ),
+});

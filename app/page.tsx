@@ -4,9 +4,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DeadlineStatus, DeadlineType } from "@prisma/client";
 
-import { deleteDeadline, updateDeadlineStatus } from "@/app/data-actions";
-import { DeleteForm } from "@/app/components/data-forms";
+import { updateDeadlineStatus } from "@/app/data-actions";
+import { DeadlineStatusControl } from "@/app/components/deadline-controls";
 import { auth, signOut } from "@/auth";
+import { formatEnum, formatIrishDate, formatIrishDateParts, formatIrishTime } from "@/lib/formatting";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -36,20 +37,17 @@ function CountdownUnit({ value, label }: { value: string; label: string }) {
   return <div className="countdown-unit"><strong>{value}</strong><span>{label}</span></div>;
 }
 
-function label(value: string) { return value.toLowerCase().split("_").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "); }
-function dateParts(date: Date) { return { day: date.toLocaleDateString("en-IE", { day: "2-digit" }), month: date.toLocaleDateString("en-IE", { month: "short" }).toUpperCase() }; }
-
-function DeadlineRow({ item }: { item: DashboardDeadline }) {
-  const date = dateParts(item.dueAt);
+function DeadlineRow({ item, finished = false }: { item: DashboardDeadline; finished?: boolean }) {
+  const date = formatIrishDateParts(item.dueAt);
   return (
-    <article className="deadline-row">
+    <article className={`deadline-row${finished ? " deadline-row-finished" : ""}`}>
       <div className="date-tile"><strong>{date.day}</strong><span>{date.month}</span></div>
       <div className="deadline-copy">
         <div className="flex flex-wrap items-center gap-2.5"><h3>{item.title}</h3><ModuleTag colour={item.module.colour}>{item.module.code || item.module.name}</ModuleTag></div>
-        <p>{label(item.type)} · {item.dueAt.toLocaleTimeString("en-IE", { hour: "numeric", minute: "2-digit" })}</p>
+        <p>{formatEnum(item.type)} · {formatIrishDate(item.dueAt)} at {formatIrishTime(item.dueAt)}</p>
       </div>
-      <div className="deadline-meta"><span>{item.weighting == null ? "No weighting" : `${item.weighting}% weighting`}</span><form action={updateDeadlineStatus}><input type="hidden" name="id" value={item.id} /><select className="status-select" name="status" defaultValue={item.status}>{Object.values(DeadlineStatus).map((status) => <option key={status} value={status}>{label(status)}</option>)}</select><button className="status-update">Save</button></form></div>
-      <div className="row-actions"><Link href={`/deadlines/${item.id}/edit`}>Edit</Link><DeleteForm action={deleteDeadline.bind(null, item.id)} label="Delete" /></div>
+      <div className="deadline-meta"><span>{item.weighting == null ? "No weighting" : `${item.weighting}% weighting`}</span><DeadlineStatusControl id={item.id} status={item.status} action={updateDeadlineStatus} /></div>
+      <div className="row-actions"><Link href={`/deadlines/${item.id}/edit`}>Edit</Link></div>
     </article>
   );
 }
@@ -59,9 +57,10 @@ function initials(user: User) {
   return source.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
-export function DashboardView({ user, deadlines, completedCount, moduleCount, renderedAt }: { user: User; deadlines: DashboardDeadline[]; completedCount: number; moduleCount: number; renderedAt: number }) {
+export function DashboardView({ user, activeDeadlines, recentDeadlines, deadlineCount, completedCount, moduleCount, renderedAt }: { user: User; activeDeadlines: DashboardDeadline[]; recentDeadlines: DashboardDeadline[]; deadlineCount: number; completedCount: number; moduleCount: number; renderedAt: number }) {
   const displayName = user.name?.trim() || "Student";
-  const next = deadlines[0];
+  const next = activeDeadlines[0];
+  const overdue = next ? next.dueAt.getTime() < renderedAt : false;
   const remainingMs = next ? Math.max(0, next.dueAt.getTime() - renderedAt) : 0;
   const remainingDays = Math.floor(remainingMs / 86400000);
   const remainingHours = Math.floor((remainingMs % 86400000) / 3600000);
@@ -88,34 +87,36 @@ export function DashboardView({ user, deadlines, completedCount, moduleCount, re
 
       <main id="overview" className="shell py-8 sm:py-11">
         <section className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div><p className="eyebrow">Spring semester · Week 8</p><h1>Good morning, {displayName.split(" ")[0]}.</h1><p className="intro">Here’s what’s coming up across your modules.</p></div>
+          <div><p className="eyebrow">Semester 2 · Week 8</p><h1>Good morning, {displayName.split(" ")[0]}.</h1><p className="intro">Here’s what’s coming up across your modules.</p></div>
           <div className="semester-pill"><span><Icon name="trend" /></span><div><strong>6 of 14 complete</strong><small>43% through semester</small></div></div>
         </section>
 
         {next ? <section className="next-card" aria-labelledby="next-deadline-title">
           <div className="next-copy">
             <div className="next-label"><span><Icon name="sparkles" className="size-4" /></span>Next deadline</div>
-            <div className="mt-8 flex flex-wrap items-center gap-3"><ModuleTag colour={next.module.colour}>{next.module.code || next.module.name}</ModuleTag><span className="type-label">{label(next.type)}</span></div>
+            <div className="mt-8 flex flex-wrap items-center gap-3"><ModuleTag colour={next.module.colour}>{next.module.code || next.module.name}</ModuleTag><span className="type-label">{formatEnum(next.type)}</span></div>
             <h2 id="next-deadline-title">{next.title}</h2>
-            <p>{next.notes || `Your next ${label(next.type).toLowerCase()} for ${next.module.name}.`}</p>
-            <div className="due-line"><Icon name="calendar" /><strong>Due {next.dueAt.toLocaleDateString("en-IE", { weekday: "long", day: "numeric", month: "long" })}</strong><span>at {next.dueAt.toLocaleTimeString("en-IE", { hour: "numeric", minute: "2-digit" })}</span></div>
-            <div className="progress-label"><span>Status</span><strong>{label(next.status)}{next.weighting == null ? "" : ` · ${next.weighting}% weighting`}</strong></div><div className="progress-track"><span /></div>
+            <p>{next.notes || `Your next ${formatEnum(next.type).toLowerCase()} for ${next.module.name}.`}</p>
+            <div className="due-line"><Icon name="calendar" /><strong>Due {formatIrishDate(next.dueAt)}</strong><span>at {formatIrishTime(next.dueAt)}</span></div>
+            <div className="progress-label"><span>Status</span><strong>{formatEnum(next.status)}{next.weighting == null ? "" : ` · ${next.weighting}% weighting`}</strong></div><div className="progress-track"><span /></div>
           </div>
-          <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value={String(remainingDays).padStart(2, "0")} label="Days" /><b>:</b><CountdownUnit value={String(remainingHours).padStart(2, "0")} label="Hours" /><b>:</b><CountdownUnit value={String(remainingMinutes).padStart(2, "0")} label="Mins" /></div><div className="urgency"><span />{remainingDays < 3 ? "Due soon — stay focused" : "Coming up"}</div></div>
-        </section> : <section className="empty-state dashboard-empty"><h2>No upcoming deadlines</h2><p>Add a module and your first deadline to start planning your semester.</p><div><Link className="add-button" href="/deadlines/new">Add deadline</Link><Link className="secondary-button" href="/modules">Manage modules</Link></div></section>}
+          <div className="countdown-panel"><p>Time remaining</p><div className="countdown"><CountdownUnit value={String(remainingDays).padStart(2, "0")} label="Days" /><b>:</b><CountdownUnit value={String(remainingHours).padStart(2, "0")} label="Hours" /><b>:</b><CountdownUnit value={String(remainingMinutes).padStart(2, "0")} label="Mins" /></div><div className="urgency"><span />{overdue ? "Overdue — needs attention" : remainingDays < 3 ? "Due soon — stay focused" : "Coming up"}</div></div>
+        </section> : deadlineCount > 0 ? <section className="empty-state dashboard-empty finished-state"><h2>You’re all caught up</h2><p>There are no active deadlines needing attention right now.</p><Link className="add-button" href="/deadlines/new">Add deadline</Link></section> : <section className="empty-state dashboard-empty"><h2>No deadlines yet</h2><p>Add a module and your first deadline to start planning your semester.</p><div><Link className="add-button" href="/deadlines/new">Add deadline</Link><Link className="secondary-button" href="/modules">Manage modules</Link></div></section>}
 
         <section id="deadlines" className="mt-10">
           <div className="section-heading"><div><h2>Upcoming deadlines</h2><p>Your next assessments, ordered by due date.</p></div><Link className="view-button" href="/deadlines/new">Add new <span>→</span></Link></div>
-          {deadlines.length ? <div className="deadline-list">{deadlines.map((item) => <DeadlineRow key={item.id} item={item} />)}</div> : <div className="deadline-list-empty">Nothing due yet.</div>}
+          {activeDeadlines.length ? <div className="deadline-list">{activeDeadlines.map((item) => <DeadlineRow key={item.id} item={item} />)}</div> : <div className="deadline-list-empty">Nothing currently needs attention.</div>}
         </section>
 
+        {recentDeadlines.length > 0 && <details className="recent-work"><summary><span>Recently submitted or completed</span><small>{recentDeadlines.length} {recentDeadlines.length === 1 ? "deadline" : "deadlines"}</small></summary><div className="deadline-list">{recentDeadlines.map((item) => <DeadlineRow key={item.id} item={item} finished />)}</div></details>}
+
         <section className="summary-grid" aria-label="Semester summary">
-          <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Upcoming</span><strong>{deadlines.length} deadlines</strong></div></article>
+          <article><div className="summary-icon violet"><Icon name="calendar" /></div><div><span>Active</span><strong>{activeDeadlines.length} deadlines</strong></div></article>
           <article><div className="summary-icon green"><Icon name="trend" /></div><div><span>Completed</span><strong>{completedCount} assessments</strong></div></article>
           <article><div className="summary-icon amber"><Icon name="clock" /></div><div><span>Modules</span><strong>{moduleCount} active</strong></div></article>
         </section>
       </main>
-      <footer className="shell footer"><span>DueSoon</span><p>One place for every deadline.</p><small>Spring semester 2026</small></footer>
+      <footer className="shell footer"><span>DueSoon</span><p>One place for every deadline.</p><small>Semester 2 · 2025/26</small></footer>
     </div>
   );
 }

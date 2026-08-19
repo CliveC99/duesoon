@@ -14,15 +14,22 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/sign-in");
 
   const now = new Date();
-  const [deadlines, completedCount, moduleCount] = await Promise.all([
+  const [activeDeadlines, recentDeadlines, completedCount, moduleCount, deadlineCount] = await Promise.all([
     prisma.deadline.findMany({
-      where: { userId: session.user.id, dueAt: { gte: now } },
+      where: { userId: session.user.id, status: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
       select: { id: true, title: true, type: true, dueAt: true, weighting: true, status: true, notes: true, module: { select: { name: true, code: true, colour: true } } },
       orderBy: { dueAt: "asc" },
     }),
+    prisma.deadline.findMany({
+      where: { userId: session.user.id, status: { in: ["SUBMITTED", "COMPLETED"] } },
+      select: { id: true, title: true, type: true, dueAt: true, weighting: true, status: true, notes: true, module: { select: { name: true, code: true, colour: true } } },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+    }),
     prisma.deadline.count({ where: { userId: session.user.id, status: "COMPLETED" } }),
     prisma.module.count({ where: { userId: session.user.id } }),
+    prisma.deadline.count({ where: { userId: session.user.id } }),
   ]);
 
-  return <DashboardView user={session.user} deadlines={deadlines} completedCount={completedCount} moduleCount={moduleCount} renderedAt={now.getTime()} />;
+  return <DashboardView user={session.user} activeDeadlines={activeDeadlines} recentDeadlines={recentDeadlines} deadlineCount={deadlineCount} completedCount={completedCount} moduleCount={moduleCount} renderedAt={now.getTime()} />;
 }

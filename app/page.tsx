@@ -9,6 +9,7 @@ import { signOutUser } from "@/app/auth-actions";
 import { DeadlineStatusControl } from "@/app/components/deadline-controls";
 import { DesktopNavigation } from "@/app/components/desktop-navigation";
 import { MobileNavigation } from "@/app/components/mobile-navigation";
+import { InstallGuidance } from "@/app/components/install-guidance";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { UserReminderCentre } from "@/app/components/user-reminder-centre";
 import { auth } from "@/auth";
@@ -105,6 +106,7 @@ export function DashboardView({ user, activeDeadlines, dailyDeadlines, recentDea
       </header>
 
       <main id="overview" className="shell py-8 sm:py-11">
+        <InstallGuidance placement="dashboard" />
         <section className="dashboard-heading mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div><p className="eyebrow">Today · {formatIrishCalendarDate(irishDateKey(timetableNow))}</p><h1>Good morning, {displayName.split(" ")[0]}.</h1><p className="intro">{semester ? `${semester.name} · ${semester.academicYear} · ${semester.phase}` : "Here’s what matters today."}</p></div>
           {semester ? <Link className="semester-pill" href="/semesters" aria-label="Manage semesters"><span><Icon name="trend" /></span><div><strong>{completedCount} of {deadlineCount} complete</strong><small>{semester.progress}% through semester</small></div></Link> : <Link className="semester-pill semester-setup" href="/semesters/new"><span><Icon name="plus" /></span><div><strong>Set up your semester</strong><small>Add dates to track week and progress</small></div></Link>}

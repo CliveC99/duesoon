@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,7 +17,22 @@ export const metadata: Metadata = {
     default: "DueSoon",
     template: "DueSoon - %s",
   },
-  description: "A focused college deadline and exam tracker.",
+  applicationName: "DueSoon",
+  description: "A focused college deadline, grade, and timetable tracker.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "DueSoon",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#6558d9" },
+    { media: "(prefers-color-scheme: dark)", color: "#111113" },
+  ],
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

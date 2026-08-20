@@ -15,6 +15,7 @@ type CalendarDeadline = {
   type: DeadlineType;
   dueAt: Date;
   status: DeadlineStatus;
+  examLocation: string | null;
   module: { name: string; code: string | null; colour: string; semesterId: string | null };
 };
 
@@ -51,7 +52,7 @@ export function MonthCalendar({
     const urgency = deadlineUrgency(deadline.dueAt, new Date(now));
     const dueSoon = activeStatuses.includes(deadline.status) && calendarDaysUntil(deadline.dueAt, new Date(now)) <= 3;
     const status = overdue || dueSoon ? urgency : formatEnum(deadline.status);
-    return <Link className={`calendar-event status-${deadline.status.toLowerCase().replaceAll("_", "-")}${overdue ? " calendar-event-overdue" : ""}${finished ? " calendar-event-finished" : ""}${outsideActiveSemester ? " calendar-event-other-semester" : ""}`} href={`/deadlines/${deadline.id}/edit`} key={deadline.id} style={{ borderLeftColor: deadline.module.colour }} aria-label={`${deadline.title}, ${deadline.module.name}, ${formatIrishTime(deadline.dueAt)}, ${status}`}><strong>{deadline.title}</strong><span className="calendar-event-module"><i style={{ backgroundColor: deadline.module.colour }} />{deadline.module.code || deadline.module.name}</span><small>{formatIrishTime(deadline.dueAt)} · {formatEnum(deadline.type)}</small><em>{status}</em>{compact && <span className="calendar-event-mobile-module">{deadline.module.name}</span>}</Link>;
+    return <Link className={`calendar-event status-${deadline.status.toLowerCase().replaceAll("_", "-")}${deadline.type === "EXAM" ? " calendar-exam-event" : ""}${overdue ? " calendar-event-overdue" : ""}${finished ? " calendar-event-finished" : ""}${outsideActiveSemester ? " calendar-event-other-semester" : ""}`} href={`/deadlines/${deadline.id}/edit`} key={deadline.id} style={{ borderLeftColor: deadline.module.colour }} aria-label={`${deadline.type === "EXAM" ? "Exam, " : ""}${deadline.title}, ${deadline.module.name}, ${formatIrishTime(deadline.dueAt)}${deadline.examLocation ? `, ${deadline.examLocation}` : ""}, ${status}`}><strong>{deadline.type === "EXAM" ? `EXAM · ${deadline.title}` : deadline.title}</strong><span className="calendar-event-module"><i style={{ backgroundColor: deadline.module.colour }} />{deadline.module.code || deadline.module.name}</span><small>{formatIrishTime(deadline.dueAt)}{deadline.type === "EXAM" && deadline.examLocation ? ` · ${deadline.examLocation}` : ` · ${formatEnum(deadline.type)}`}</small><em>{status}</em>{compact && <span className="calendar-event-mobile-module">{deadline.module.name}</span>}</Link>;
   }
 
   function timetableCard(event: CalendarTimetableEvent, compact = false) {

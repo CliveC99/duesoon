@@ -134,6 +134,9 @@ model Deadline {
   resultRecordedAt   DateTime?
   status             DeadlineStatus  @default(NOT_STARTED)
   notes              String?
+  examTopics         String?
+  examFormat         String?
+  examLocation       String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
   user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)

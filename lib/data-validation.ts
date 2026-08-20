@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { canonicalAcademicYear, isConsecutiveAcademicYear } from "./academic-year.ts";
 
-const optionalText = (max: number) => z.string().trim().max(max).transform((value) => value || null);
+const optionalText = (max: number) => z.preprocess((value) => value ?? "", z.string().trim().max(max).transform((value) => value || null));
 
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.").transform((value) => new Date(`${value}T00:00:00.000Z`));
 const dueDateTime = z.string().min(1, "Choose a due date.").transform((value, ctx) => {
@@ -54,6 +54,14 @@ export const deadlineSchema = z.object({
   weighting: optionalWeighting,
   status: z.nativeEnum(DeadlineStatus),
   notes: optionalText(2000),
+  examTopics: optionalText(4000),
+  examFormat: optionalText(1000),
+  examLocation: optionalText(200),
+}).transform((value) => value.type === DeadlineType.EXAM ? value : {
+  ...value,
+  examTopics: null,
+  examFormat: null,
+  examLocation: null,
 });
 
 export const statusSchema = z.object({

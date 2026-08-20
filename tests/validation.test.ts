@@ -61,6 +61,18 @@ test("deadline weighting, results, and reminders stay within supported ranges", 
   assert.equal(deadlineResultSchema.safeParse({ resultPercent: "-1" }).success, false);
 });
 
+test("exam details persist only for exam deadlines", () => {
+  const base = { title: "Algorithms Exam", moduleId: cuid, dueAt: "2026-12-10T09:00:00.000Z", weighting: "40", reminderDaysBefore: "7", status: "NOT_STARTED", notes: "", examTopics: " Linked lists\nTrees ", examFormat: "2 hours, answer 4", examLocation: "GA 0994" };
+  const exam = deadlineSchema.parse({ ...base, type: "EXAM" });
+  assert.equal(exam.examTopics, "Linked lists\nTrees");
+  assert.equal(exam.examFormat, "2 hours, answer 4");
+  assert.equal(exam.examLocation, "GA 0994");
+  const project = deadlineSchema.parse({ ...base, type: "PROJECT" });
+  assert.equal(project.examTopics, null);
+  assert.equal(project.examFormat, null);
+  assert.equal(project.examLocation, null);
+});
+
 test("group and shared import validation rejects malformed input", () => {
   assert.equal(groupSchema.parse({ name: "  Software Development Year 2 " }).name, "Software Development Year 2");
   assert.equal(groupSchema.safeParse({ name: "x" }).success, false);

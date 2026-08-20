@@ -14,13 +14,16 @@ export function sharedDeadlineMemberWhere(id: string, groupId: string, userId: s
   return { id, groupId, group: { members: { some: { userId } } } } as const;
 }
 
-export function linkedPersonalFields<T extends { moduleId: string; reminderDaysBefore: number | null; status: string; notes: string | null }>(data: T) {
+export function linkedPersonalFields<T extends { moduleId: string; reminderDaysBefore: number | null; status: string; notes: string | null; examTopics: string | null; examFormat: string | null; examLocation: string | null }>(data: T) {
   return {
     moduleId: data.moduleId,
     reminderDaysBefore: data.reminderDaysBefore,
     status: data.status,
     notes: data.notes,
-  } as Pick<T, "moduleId" | "reminderDaysBefore" | "status" | "notes">;
+    examTopics: data.examTopics,
+    examFormat: data.examFormat,
+    examLocation: data.examLocation,
+  } as Pick<T, "moduleId" | "reminderDaysBefore" | "status" | "notes" | "examTopics" | "examFormat" | "examLocation">;
 }
 
 export function sharedCommonFields<T extends { title: string; type: string; dueAt: Date; weighting: number | null }>(data: T) {

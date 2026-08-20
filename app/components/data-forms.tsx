@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 
 import type { DataActionState } from "@/app/data-actions";
 import { DueDatePicker } from "@/app/components/due-date-picker";
+import { DeadlineCreationExtras } from "@/app/components/deadline-creation-extras";
 import { SemesterDatePicker } from "@/app/components/semester-date-picker";
 import { formatAcademicYearInput } from "@/lib/academic-year";
 import { formatEnum } from "@/lib/formatting";
@@ -73,6 +74,7 @@ export function DeadlineForm({ action, modules, initial, commonFieldsLocked = fa
     </fieldset>}
     <label htmlFor="status">Status</label><select id="status" name="status" defaultValue={initial?.status ?? DeadlineStatus.NOT_STARTED}>{Object.values(DeadlineStatus).map((status) => <option key={status} value={status}>{formatEnum(status)}</option>)}</select>
     <label htmlFor="notes">Private notes <span>Optional</span></label><textarea id="notes" name="notes" defaultValue={initial?.notes ?? ""} rows={4} maxLength={2000} placeholder="Brief, submission details, or revision notes…" />
+    {!initial && <DeadlineCreationExtras />}
     {state.error && <p className="auth-error" role="alert">{state.error}</p>}
     <button className="auth-submit" disabled={pending}>{pending ? "Saving…" : initial ? "Save changes" : "Add deadline"}</button>
   </form>;

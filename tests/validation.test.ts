@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { changePasswordSchema, profileEmailSchema, profileNameSchema, signUpSchema } from "../lib/auth-validation.ts";
+import { formatAcademicYearInput, normalizeAcademicYear } from "../lib/academic-year.ts";
 import { deadlineResultSchema, deadlineSchema, groupSchema, semesterSchema, sharedDeadlineImportSchema } from "../lib/data-validation.ts";
 
 const cuid = "clx1234567890123456789012";
@@ -24,9 +25,29 @@ test("profile validation trims names, normalises email, and checks password rule
 
 test("semester academic years must be consecutive and dates ordered", () => {
   const base = { name: "Semester 1", startDate: "2026-09-01", endDate: "2026-12-20", isActive: "true" };
-  assert.equal(semesterSchema.safeParse({ ...base, academicYear: "2026/27" }).success, true);
+  for (const value of ["2026/27", "202627", "26/27", "2627"]) {
+    assert.equal(semesterSchema.parse({ ...base, academicYear: value }).academicYear, "2026/27");
+  }
+  assert.equal(semesterSchema.safeParse({ ...base, academicYear: "26/28" }).success, false);
   assert.equal(semesterSchema.safeParse({ ...base, academicYear: "2026/28" }).success, false);
   assert.equal(semesterSchema.safeParse({ ...base, academicYear: "2026/27", startDate: "2026-12-21" }).success, false);
+});
+
+test("academic year input inserts slashes without fighting deletion or editing", () => {
+  assert.equal(formatAcademicYearInput("2026"), "2026/");
+  assert.equal(formatAcademicYearInput("202627"), "2026/27");
+  assert.equal(formatAcademicYearInput("26"), "26/");
+  assert.equal(formatAcademicYearInput("2627"), "26/27");
+  assert.equal(formatAcademicYearInput("2026", { deleting: true }), "2026");
+  assert.equal(formatAcademicYearInput("206/27", { atEnd: false }), "206/27");
+});
+
+test("academic year input handles pasted values and canonical normalization", () => {
+  assert.equal(formatAcademicYearInput(" 202627 "), "2026/27");
+  assert.equal(formatAcademicYearInput("26 / 27"), "26/27");
+  assert.equal(normalizeAcademicYear("26/27"), "2026/27");
+  assert.equal(normalizeAcademicYear("2627"), "2026/27");
+  assert.equal(normalizeAcademicYear("26/28"), null);
 });
 
 test("deadline weighting, results, and reminders stay within supported ranges", () => {

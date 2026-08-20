@@ -1,6 +1,8 @@
 import { DeadlineStatus, DeadlineType } from "@prisma/client";
 import { z } from "zod";
 
+import { canonicalAcademicYear, isConsecutiveAcademicYear } from "./academic-year.ts";
+
 const optionalText = (max: number) => z.string().trim().max(max).transform((value) => value || null);
 
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.").transform((value) => new Date(`${value}T00:00:00.000Z`));
@@ -16,10 +18,18 @@ const optionalWeighting = z.string().trim().transform((value) => value === "" ? 
 
 export const semesterSchema = z.object({
   name: z.enum(["Semester 1", "Semester 2"]),
-  academicYear: z.string().trim().regex(/^\d{4}\/\d{2}$/, "Enter the academic year in YYYY/YY format, for example 2026/27.").refine((value) => {
-    const [start, end] = value.split("/").map(Number);
-    return (start + 1) % 100 === end;
-  }, "The second year must be consecutive; for example, use 2026/27 rather than 2026/28."),
+  academicYear: z.string().trim().transform((value, context) => {
+    const canonical = canonicalAcademicYear(value);
+    if (!canonical) {
+      context.addIssue({ code: "custom", message: "Enter an academic year such as 2026/27 or 26/27." });
+      return z.NEVER;
+    }
+    if (!isConsecutiveAcademicYear(canonical)) {
+      context.addIssue({ code: "custom", message: "The second year must be consecutive; for example, use 2026/27 rather than 2026/28." });
+      return z.NEVER;
+    }
+    return canonical;
+  }),
   startDate: dateOnly,
   endDate: dateOnly,
   isActive: z.preprocess((value) => value === "on" || value === "true", z.boolean()),

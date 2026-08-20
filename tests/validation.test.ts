@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { changePasswordSchema, profileEmailSchema, profileNameSchema, signUpSchema } from "../lib/auth-validation.ts";
 import { formatAcademicYearInput, normalizeAcademicYear } from "../lib/academic-year.ts";
 import { deadlineResultSchema, deadlineSchema, groupSchema, semesterSchema, sharedDeadlineImportSchema } from "../lib/data-validation.ts";
+import { subtaskTitleSchema } from "../lib/subtasks.ts";
 
 const cuid = "clx1234567890123456789012";
 
@@ -79,4 +80,10 @@ test("group and shared import validation rejects malformed input", () => {
   assert.equal(sharedDeadlineImportSchema.safeParse({ moduleId: cuid, reminderDaysBefore: "14" }).success, true);
   assert.equal(sharedDeadlineImportSchema.safeParse({ moduleId: "group-id", reminderDaysBefore: "14" }).success, false);
   assert.equal(sharedDeadlineImportSchema.safeParse({ moduleId: cuid, reminderDaysBefore: "30" }).success, false);
+});
+
+test("subtask titles are trimmed and empty or oversized titles are rejected", () => {
+  assert.equal(subtaskTitleSchema.parse({ title: "  Build authentication  " }).title, "Build authentication");
+  assert.equal(subtaskTitleSchema.safeParse({ title: "   " }).success, false);
+  assert.equal(subtaskTitleSchema.safeParse({ title: "x".repeat(181) }).success, false);
 });

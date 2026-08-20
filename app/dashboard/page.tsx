@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     }),
     prisma.deadline.findMany({
       where: { userId: session.user.id, status: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
-      select: { id: true, title: true, dueAt: true, weighting: true, reminderDaysBefore: true, status: true, module: { select: { name: true, code: true, colour: true } } },
+      select: { id: true, title: true, dueAt: true, weighting: true, reminderDaysBefore: true, status: true, subtasks: { select: { title: true, isCompleted: true, position: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }, module: { select: { name: true, code: true, colour: true } } },
       orderBy: { dueAt: "asc" },
     }),
     prisma.deadline.findMany({

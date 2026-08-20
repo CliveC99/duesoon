@@ -20,6 +20,7 @@ model User {
   modules                Module[]
   deadlines              Deadline[]
   deadlineSubtasks       DeadlineSubtask[]
+  deadlineResources      DeadlineResource[]
   ownedGroups            Group[]          @relation("GroupOwner")
   groupMemberships       GroupMember[]
   sharedDeadlinesCreated SharedDeadline[] @relation("SharedDeadlineCreator")
@@ -144,6 +145,7 @@ model Deadline {
   module             Module          @relation(fields: [moduleId, userId], references: [id, userId], onDelete: Restrict)
   sharedDeadline     SharedDeadline? @relation(fields: [sharedDeadlineId], references: [id], onDelete: SetNull)
   subtasks           DeadlineSubtask[]
+  resources          DeadlineResource[]
 
   @@unique([id, userId])
   @@unique([userId, sharedDeadlineId])
@@ -163,6 +165,22 @@ model DeadlineSubtask {
   updatedAt   DateTime @updatedAt
   deadline    Deadline @relation(fields: [deadlineId, userId], references: [id, userId], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([deadlineId, userId, position])
+  @@index([userId])
+}
+
+model DeadlineResource {
+  id         String   @id @default(cuid())
+  deadlineId String
+  userId     String
+  label      String
+  url        String
+  position   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deadline   Deadline @relation(fields: [deadlineId, userId], references: [id, userId], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([deadlineId, userId, position])
   @@index([userId])

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-import { linkedPersonalFields, membershipKey, ownedRecordWhere, ownedSubtaskWhere, sharedCommonFields, sharedDeadlineMemberWhere, timetableSourceWhere } from "../lib/authorization.ts";
+import { linkedPersonalFields, membershipKey, ownedRecordWhere, ownedResourceWhere, ownedSubtaskWhere, sharedCommonFields, sharedDeadlineMemberWhere, timetableSourceWhere } from "../lib/authorization.ts";
 
 test("personal record predicates always bind IDs to the authenticated owner", () => {
   assert.deepEqual(ownedRecordWhere("deadline-b", "user-a"), { id: "deadline-b", userId: "user-a" });
@@ -12,6 +12,18 @@ test("personal record predicates always bind IDs to the authenticated owner", ()
 
 test("subtask predicates bind task, parent deadline, and authenticated owner", () => {
   assert.deepEqual(ownedSubtaskWhere("task-b", "deadline-b", "user-a"), { id: "task-b", deadlineId: "deadline-b", userId: "user-a" });
+});
+
+test("resource predicates bind resource, personal deadline, and authenticated owner", () => {
+  assert.deepEqual(ownedResourceWhere("resource-b", "deadline-b", "user-a"), { id: "resource-b", deadlineId: "deadline-b", userId: "user-a" });
+});
+
+test("resource create, edit, delete, and reorder actions re-authorize the user", async () => {
+  const source = await readFile(new URL("../app/resource-actions.ts", import.meta.url), "utf8");
+  assert.match(source, /const userId = await requireUserId\(\)/);
+  assert.match(source, /prisma\.deadline\.findFirst\(\{ where: ownedRecordWhere\(deadlineId, userId\)/);
+  assert.ok((source.match(/ownedResourceWhere\(/g) ?? []).length >= 5);
+  assert.doesNotMatch(source, /formData\.get\(["']userId["']\)/);
 });
 
 test("subtask create, edit, toggle, delete, and reorder actions re-authorize the user", async () => {

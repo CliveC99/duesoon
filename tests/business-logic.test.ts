@@ -9,6 +9,7 @@ import { examListWhere, examOrder, examTopics, parseExamView } from "../lib/exam
 import { calendarDaysUntil, deadlineUrgency, isReminderEligible } from "../lib/reminders.ts";
 import { semesterTiming } from "../lib/semester.ts";
 import { firstIncompleteSubtask, nextSubtaskPosition, subtaskProgress } from "../lib/subtasks.ts";
+import { nextResourcePosition, resourceHostname } from "../lib/deadline-resources.ts";
 
 test("grade calculations include assessed weighting without inventing missing results", () => {
   const result = calculateModuleGrades([{ weighting: 40, resultPercent: 75 }, { weighting: 60, resultPercent: null }, { weighting: null, resultPercent: 80 }]);
@@ -143,4 +144,20 @@ test("subtasks cascade with personal deadlines and never relate to shared deadli
   assert.match(schema, /deadline\s+Deadline\s+@relation\(fields: \[deadlineId, userId\], references: \[id, userId\], onDelete: Cascade\)/);
   const model = schema.match(/model DeadlineSubtask \{[\s\S]*?\n\}/)?.[0] ?? "";
   assert.doesNotMatch(model, /SharedDeadline/);
+});
+
+test("deadline resources append stably and display a compact hostname", () => {
+  assert.equal(nextResourcePosition([]), 0);
+  assert.equal(nextResourcePosition([0, 3, 1]), 4);
+  assert.equal(resourceHostname("https://vle.atu.ie/course/view.php?id=123"), "vle.atu.ie");
+});
+
+test("resources cascade from every personal deadline type and never relate to shared deadlines", async () => {
+  const schema = await readFile(new URL("../prisma/schema.prisma", import.meta.url), "utf8");
+  const model = schema.match(/model DeadlineResource \{[\s\S]*?\n\}/)?.[0] ?? "";
+  assert.match(model, /deadline\s+Deadline\s+@relation\(fields: \[deadlineId, userId\], references: \[id, userId\], onDelete: Cascade\)/);
+  assert.doesNotMatch(model, /SharedDeadline|DeadlineType/);
+  assert.match(schema, /resources\s+DeadlineResource\[\]/);
+  const component = await readFile(new URL("../app/components/deadline-resources.tsx", import.meta.url), "utf8");
+  assert.match(component, /target="_blank" rel="noopener noreferrer"/);
 });

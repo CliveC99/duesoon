@@ -5,6 +5,7 @@ import { changePasswordSchema, profileEmailSchema, profileNameSchema, signUpSche
 import { formatAcademicYearInput, normalizeAcademicYear } from "../lib/academic-year.ts";
 import { deadlineResultSchema, deadlineSchema, groupSchema, semesterSchema, sharedDeadlineImportSchema } from "../lib/data-validation.ts";
 import { subtaskTitleSchema } from "../lib/subtasks.ts";
+import { deadlineResourceSchema } from "../lib/deadline-resources.ts";
 
 const cuid = "clx1234567890123456789012";
 
@@ -86,4 +87,17 @@ test("subtask titles are trimmed and empty or oversized titles are rejected", ()
   assert.equal(subtaskTitleSchema.parse({ title: "  Build authentication  " }).title, "Build authentication");
   assert.equal(subtaskTitleSchema.safeParse({ title: "   " }).success, false);
   assert.equal(subtaskTitleSchema.safeParse({ title: "x".repeat(181) }).success, false);
+});
+
+test("deadline resources require labels and safe web URLs", () => {
+  const parsed = deadlineResourceSchema.parse({ label: "  Moodle  ", url: "https://VLE.ATU.ie/course?id=2" });
+  assert.equal(parsed.label, "Moodle");
+  assert.equal(parsed.url, "https://vle.atu.ie/course?id=2");
+  assert.equal(deadlineResourceSchema.safeParse({ label: "", url: "https://example.com" }).success, false);
+  assert.equal(deadlineResourceSchema.safeParse({ label: "Brief", url: "" }).success, false);
+  assert.equal(deadlineResourceSchema.safeParse({ label: "Brief", url: "not a url" }).success, false);
+  for (const url of ["javascript:alert(1)", "data:text/html,test", "file:///etc/passwd", "https://user:password@example.com"]) {
+    assert.equal(deadlineResourceSchema.safeParse({ label: "Unsafe", url }).success, false);
+  }
+  assert.equal(deadlineResourceSchema.safeParse({ label: "Local", url: "http://localhost:3000/brief" }).success, true);
 });

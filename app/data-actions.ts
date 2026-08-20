@@ -7,6 +7,7 @@ import { deadlineResultSchema, deadlineSchema, moduleSchema, semesterSchema, sta
 import { linkedPersonalFields, ownedRecordWhere } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
+import { deadlineCreationChildData, parseDeadlineCreationExtras } from "@/lib/deadline-creation-extras";
 
 export type SemesterFormValues = { name: string; academicYear: string; startDate: string; endDate: string; isActive: boolean };
 export type DataActionState = { error?: string; fieldErrors?: Record<string, string[]>; semesterValues?: SemesterFormValues };
@@ -122,8 +123,15 @@ export async function createDeadline(_state: DataActionState, formData: FormData
   const userId = await requireUserId();
   const parsed = deadlineSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
+  const extras = parseDeadlineCreationExtras(formData.get("deadlineSubtasks"), formData.get("deadlineResources"));
+  if (!extras.success) return { error: firstError(extras.error) };
   if (!await ownedModuleExists(parsed.data.moduleId, userId)) return { error: "Choose one of your modules." };
-  await prisma.deadline.create({ data: { ...parsed.data, userId } });
+  await prisma.$transaction(async (transaction) => {
+    const deadline = await transaction.deadline.create({ data: { ...parsed.data, userId }, select: { id: true } });
+    const children = deadlineCreationChildData(extras.data, deadline.id, userId);
+    if (children.subtasks.length > 0) await transaction.deadlineSubtask.createMany({ data: children.subtasks });
+    if (children.resources.length > 0) await transaction.deadlineResource.createMany({ data: children.resources });
+  });
   revalidatePath("/dashboard"); revalidatePath("/exams"); revalidatePath("/calendar");
   redirect("/dashboard");
 }

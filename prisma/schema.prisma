@@ -19,6 +19,7 @@ model User {
   semesters              Semester[]
   modules                Module[]
   deadlines              Deadline[]
+  deadlineSubtasks       DeadlineSubtask[]
   ownedGroups            Group[]          @relation("GroupOwner")
   groupMemberships       GroupMember[]
   sharedDeadlinesCreated SharedDeadline[] @relation("SharedDeadlineCreator")
@@ -142,11 +143,29 @@ model Deadline {
   user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   module             Module          @relation(fields: [moduleId, userId], references: [id, userId], onDelete: Restrict)
   sharedDeadline     SharedDeadline? @relation(fields: [sharedDeadlineId], references: [id], onDelete: SetNull)
+  subtasks           DeadlineSubtask[]
 
+  @@unique([id, userId])
   @@unique([userId, sharedDeadlineId])
   @@index([userId, dueAt])
   @@index([moduleId, userId])
   @@index([sharedDeadlineId])
+}
+
+model DeadlineSubtask {
+  id          String   @id @default(cuid())
+  deadlineId  String
+  userId      String
+  title       String
+  isCompleted Boolean  @default(false)
+  position    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deadline    Deadline @relation(fields: [deadlineId, userId], references: [id, userId], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([deadlineId, userId, position])
+  @@index([userId])
 }
 
 model Group {

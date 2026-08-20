@@ -2,6 +2,10 @@ export function ownedRecordWhere(id: string, userId: string) {
   return { id, userId } as const;
 }
 
+export function ownedSubtaskWhere(id: string, deadlineId: string, userId: string) {
+  return { id, deadlineId, userId } as const;
+}
+
 export function timetableSourceWhere(id: string, userId: string) {
   return { id, userId } as const;
 }

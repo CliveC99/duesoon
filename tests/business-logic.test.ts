@@ -8,6 +8,7 @@ import { focusRecommendation } from "../lib/focus.ts";
 import { examListWhere, examOrder, examTopics, parseExamView } from "../lib/exams.ts";
 import { calendarDaysUntil, deadlineUrgency, isReminderEligible } from "../lib/reminders.ts";
 import { semesterTiming } from "../lib/semester.ts";
+import { firstIncompleteSubtask, nextSubtaskPosition, subtaskProgress } from "../lib/subtasks.ts";
 
 test("grade calculations include assessed weighting without inventing missing results", () => {
   const result = calculateModuleGrades([{ weighting: 40, resultPercent: 75 }, { weighting: 60, resultPercent: null }, { weighting: null, resultPercent: 80 }]);
@@ -112,4 +113,34 @@ test("calendar continues to source exams from deadline data", async () => {
   assert.doesNotMatch(source, /prisma\.exam/);
   const calendar = await readFile(new URL("../app/components/month-calendar.tsx", import.meta.url), "utf8");
   assert.match(calendar, /EXAM ·/);
+});
+
+test("subtask progress handles empty, partial, and all-complete checklists", () => {
+  assert.deepEqual(subtaskProgress([]), { total: 0, completed: 0, percentage: null, allComplete: false });
+  assert.deepEqual(subtaskProgress([{ isCompleted: true }, { isCompleted: false }, { isCompleted: true }]), { total: 3, completed: 2, percentage: 67, allComplete: false });
+  assert.deepEqual(subtaskProgress([{ isCompleted: true }, { isCompleted: true }]), { total: 2, completed: 2, percentage: 100, allComplete: true });
+});
+
+test("subtasks append after the highest stable position", () => {
+  assert.equal(nextSubtaskPosition([]), 0);
+  assert.equal(nextSubtaskPosition([0, 4, 2]), 5);
+});
+
+test("Focus display enrichment finds the first incomplete step without changing selection", () => {
+  const now = new Date("2026-08-20T10:00:00Z");
+  const deadlines = [
+    { id: "urgent", title: "Urgent", dueAt: new Date("2026-08-21T10:00:00Z"), weighting: 20, status: "IN_PROGRESS" as const, subtasks: [{ title: "Second", isCompleted: false, position: 2 }, { title: "First", isCompleted: false, position: 1 }] },
+    { id: "later", title: "Later", dueAt: new Date("2026-09-20T10:00:00Z"), weighting: 80, status: "IN_PROGRESS" as const, subtasks: [] },
+  ];
+  const focus = focusRecommendation(deadlines, now);
+  assert.equal(focus?.id, "urgent");
+  assert.equal(firstIncompleteSubtask(focus?.subtasks ?? [])?.title, "First");
+  assert.equal(firstIncompleteSubtask([{ title: "Done", isCompleted: true, position: 0 }]), null);
+});
+
+test("subtasks cascade with personal deadlines and never relate to shared deadlines", async () => {
+  const schema = await readFile(new URL("../prisma/schema.prisma", import.meta.url), "utf8");
+  assert.match(schema, /deadline\s+Deadline\s+@relation\(fields: \[deadlineId, userId\], references: \[id, userId\], onDelete: Cascade\)/);
+  const model = schema.match(/model DeadlineSubtask \{[\s\S]*?\n\}/)?.[0] ?? "";
+  assert.doesNotMatch(model, /SharedDeadline/);
 });

@@ -17,6 +17,7 @@ import { focusReason, focusRecommendation } from "@/lib/focus";
 import { formatEnum, formatIrishCalendarDate, formatIrishDate, formatIrishDateParts, formatIrishTime, irishDateKey } from "@/lib/formatting";
 import { calendarDaysUntil, deadlineUrgency, isReminderEligible } from "@/lib/reminders";
 import { nextTimetableEvent, timetableCountdown, timetableEventsForIrishDay, type TimetableEventSummary } from "@/lib/timetable";
+import { firstIncompleteSubtask } from "@/lib/subtasks";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -37,7 +38,7 @@ function Icon({ name, className = "size-5" }: { name: IconName; className?: stri
 }
 
 export type DashboardDeadline = { id: string; title: string; type: DeadlineType; dueAt: Date; weighting: number | null; status: DeadlineStatus; notes: string | null; module: { name: string; code: string | null; colour: string } };
-export type DailyDeadline = { id: string; title: string; dueAt: Date; weighting: number | null; reminderDaysBefore: number | null; status: DeadlineStatus; module: { name: string; code: string | null; colour: string } };
+export type DailyDeadline = { id: string; title: string; dueAt: Date; weighting: number | null; reminderDaysBefore: number | null; status: DeadlineStatus; subtasks: { title: string; isCompleted: boolean; position: number }[]; module: { name: string; code: string | null; colour: string } };
 export type SemesterOverview = { id: string; name: string; academicYear: string; startDate: Date; endDate: Date; phase: string; progress: number };
 
 function ModuleTag({ children, colour }: { children: React.ReactNode; colour?: string }) {
@@ -84,6 +85,7 @@ export function DashboardView({ user, activeDeadlines, dailyDeadlines, recentDea
   const nextClass = nextTimetableEvent(timetableEvents, timetableNow);
   const todaysClasses = timetableEventsForIrishDay(timetableEvents, timetableNow).filter((event) => event.endAt.getTime() > renderedAt);
   const focus = focusRecommendation(dailyDeadlines, timetableNow);
+  const focusNextStep = focus ? firstIncompleteSubtask(focus.subtasks) : null;
   const urgent = dailyDeadlines.filter((deadline) => deadline.dueAt.getTime() < renderedAt || calendarDaysUntil(deadline.dueAt, timetableNow) <= 3);
   const reminders = dailyDeadlines.filter((deadline) => isReminderEligible(deadline, timetableNow));
   const attention = [...urgent, ...reminders.filter((reminder) => !urgent.some((deadline) => deadline.id === reminder.id))].filter((deadline) => deadline.id !== focus?.id).slice(0, 5);
@@ -114,7 +116,7 @@ export function DashboardView({ user, activeDeadlines, dailyDeadlines, recentDea
 
         <div className="dashboard-daily-primary">
           {timetableConnected && nextClass ? <section className="dashboard-next-class dashboard-daily-card" aria-labelledby="next-class-heading"><p className="eyebrow">Next class</p><h2 id="next-class-heading">{nextClass.title}</h2><strong>{nextClass.allDay ? "All day" : `${formatIrishTime(nextClass.startAt)}–${formatIrishTime(nextClass.endAt)}`}</strong>{nextClass.location && <span>{nextClass.location}</span>}<em>{nextClass.startAt.getTime() <= renderedAt ? "In progress" : timetableCountdown(nextClass.startAt, timetableNow)}</em></section> : timetableConnected ? <section className="dashboard-daily-card dashboard-small-empty"><p className="eyebrow">Next class</p><p>No upcoming classes in the next eight days.</p></section> : <aside className="dashboard-daily-card dashboard-small-empty"><p className="eyebrow">Next class</p><span>Connect your timetable to see what is next.</span><Link href="/timetable">Connect timetable →</Link></aside>}
-          {focus ? <section className="today-focus dashboard-focus" aria-labelledby="focus-heading"><p className="eyebrow">Focus · What should I work on?</p><h2 id="focus-heading">{focus.title}</h2><div><span style={{ borderColor: focus.module.colour }}>{focus.module.code || focus.module.name}</span><span>{deadlineUrgency(focus.dueAt, timetableNow)}</span>{focus.weighting !== null && <span>{focus.weighting}% weighting</span>}<span>{formatEnum(focus.status)}</span></div><p>{focusReason(focus, timetableNow)}</p><Link href={`/deadlines/${focus.id}/edit`}>Open deadline</Link></section> : <section className="dashboard-daily-card dashboard-small-empty"><p className="eyebrow">Focus · What should I work on?</p><p>No active deadline needs your focus today.</p></section>}
+          {focus ? <section className="today-focus dashboard-focus" aria-labelledby="focus-heading"><p className="eyebrow">Focus · What should I work on?</p><h2 id="focus-heading">{focus.title}</h2><div><span style={{ borderColor: focus.module.colour }}>{focus.module.code || focus.module.name}</span><span>{deadlineUrgency(focus.dueAt, timetableNow)}</span>{focus.weighting !== null && <span>{focus.weighting}% weighting</span>}<span>{formatEnum(focus.status)}</span></div><p>{focusReason(focus, timetableNow)}</p>{focusNextStep && <p className="focus-next-step"><strong>Next step:</strong> {focusNextStep.title}</p>}<Link href={`/deadlines/${focus.id}/edit`}>Open deadline</Link></section> : <section className="dashboard-daily-card dashboard-small-empty"><p className="eyebrow">Focus · What should I work on?</p><p>No active deadline needs your focus today.</p></section>}
         </div>
 
         <div className="dashboard-daily-secondary">

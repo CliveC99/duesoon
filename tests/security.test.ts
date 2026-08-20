@@ -19,8 +19,8 @@ test("group and shared deadline predicates require the authenticated membership"
 });
 
 test("linked personal updates cannot overwrite common or result fields", () => {
-  const personal = linkedPersonalFields({ moduleId: "module-a", reminderDaysBefore: 7, status: "IN_PROGRESS", notes: "private", title: "attempted overwrite", resultPercent: 99 });
-  assert.deepEqual(personal, { moduleId: "module-a", reminderDaysBefore: 7, status: "IN_PROGRESS", notes: "private" });
+  const personal = linkedPersonalFields({ moduleId: "module-a", reminderDaysBefore: 7, status: "IN_PROGRESS", notes: "private", examTopics: "Trees", examFormat: "Two hours", examLocation: "GA 0994", title: "attempted overwrite", resultPercent: 99 });
+  assert.deepEqual(personal, { moduleId: "module-a", reminderDaysBefore: 7, status: "IN_PROGRESS", notes: "private", examTopics: "Trees", examFormat: "Two hours", examLocation: "GA 0994" });
   assert.equal("title" in personal, false);
   assert.equal("resultPercent" in personal, false);
 });

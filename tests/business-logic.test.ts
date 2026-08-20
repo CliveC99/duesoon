@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { adjacentMonth, calendarGrid, gridDateKey, parseCalendarMonth } from "../lib/calendar.ts";
 import { calculateGradeTarget, calculateModuleGrades } from "../lib/grades.ts";
 import { focusRecommendation } from "../lib/focus.ts";
+import { examListWhere, examOrder, examTopics, parseExamView } from "../lib/exams.ts";
 import { calendarDaysUntil, deadlineUrgency, isReminderEligible } from "../lib/reminders.ts";
 import { semesterTiming } from "../lib/semester.ts";
 
@@ -85,4 +86,30 @@ test("calendar parsing is bounded and the grid starts on Monday", () => {
   assert.equal(grid.days[0].getUTCDay(), 1);
   assert.equal(gridDateKey(grid.days[0]), "2026-07-27");
   assert.equal(adjacentMonth(2026, 11, 1), "2027-01");
+});
+
+test("exam views are owner-scoped, type-filtered, and sorted around now", () => {
+  const now = new Date("2026-12-01T12:00:00Z");
+  assert.deepEqual(examListWhere("user-a", "upcoming", now), { userId: "user-a", type: "EXAM", dueAt: { gte: now } });
+  assert.deepEqual(examListWhere("user-a", "past", now), { userId: "user-a", type: "EXAM", dueAt: { lt: now } });
+  assert.deepEqual(examOrder("upcoming"), { dueAt: "asc" });
+  assert.deepEqual(examOrder("past"), { dueAt: "desc" });
+  assert.equal(parseExamView("past"), "past");
+  assert.equal(parseExamView("anything"), "upcoming");
+  assert.deepEqual(examTopics(" Trees\n\nGraph traversal\r\nSorting "), ["Trees", "Graph traversal", "Sorting"]);
+});
+
+test("exam results use the unchanged module grade calculation", () => {
+  const examDeadline = { weighting: 40, resultPercent: 75 };
+  const result = calculateModuleGrades([examDeadline, { weighting: 60, resultPercent: 50 }]);
+  assert.equal(result.weightedPoints, 60);
+  assert.equal(result.currentAverage, 60);
+});
+
+test("calendar continues to source exams from deadline data", async () => {
+  const source = await readFile(new URL("../app/calendar/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /prisma\.deadline\.findMany/);
+  assert.doesNotMatch(source, /prisma\.exam/);
+  const calendar = await readFile(new URL("../app/components/month-calendar.tsx", import.meta.url), "utf8");
+  assert.match(calendar, /EXAM ·/);
 });

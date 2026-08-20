@@ -11,6 +11,7 @@ import { SignOutButton } from "@/app/components/sign-out-button";
 const navigation = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/calendar", label: "Calendar" },
+  { href: "/exams", label: "Exams" },
   { href: "/timetable", label: "Timetable" },
   { href: "/modules", label: "Modules" },
   { href: "/semesters", label: "Semesters" },

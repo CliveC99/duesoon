@@ -124,7 +124,7 @@ export async function createDeadline(_state: DataActionState, formData: FormData
   if (!parsed.success) return { error: firstError(parsed.error) };
   if (!await ownedModuleExists(parsed.data.moduleId, userId)) return { error: "Choose one of your modules." };
   await prisma.deadline.create({ data: { ...parsed.data, userId } });
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard"); revalidatePath("/exams"); revalidatePath("/calendar");
   redirect("/dashboard");
 }
 
@@ -138,7 +138,7 @@ export async function updateDeadline(id: string, _state: DataActionState, formDa
   const data = existing.sharedDeadlineId ? linkedPersonalFields(parsed.data) : parsed.data;
   const result = await prisma.deadline.updateMany({ where: ownedRecordWhere(id, userId), data });
   if (result.count !== 1) return { error: "Deadline not found." };
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard"); revalidatePath("/exams"); revalidatePath("/calendar");
   redirect("/dashboard");
 }
 
@@ -147,7 +147,7 @@ export async function deleteDeadline(id: string, _state: DataActionState, _formD
   const userId = await requireUserId();
   const result = await prisma.deadline.deleteMany({ where: ownedRecordWhere(id, userId) });
   if (result.count !== 1) return { error: "Deadline not found." };
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard"); revalidatePath("/exams"); revalidatePath("/calendar");
   redirect("/dashboard");
 }
 
@@ -157,6 +157,7 @@ export async function updateDeadlineStatus(formData: FormData) {
   if (!parsed.success) return;
   await prisma.deadline.updateMany({ where: ownedRecordWhere(parsed.data.id, userId), data: { status: parsed.data.status } });
   revalidatePath("/dashboard");
+  revalidatePath("/exams");
 }
 
 export async function updateDeadlineResult(id: string, _state: DataActionState, formData: FormData): Promise<DataActionState> {
@@ -180,5 +181,6 @@ export async function updateDeadlineResult(id: string, _state: DataActionState, 
   revalidatePath("/modules");
   revalidatePath(`/modules/${deadline.moduleId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/exams");
   return { };
 }

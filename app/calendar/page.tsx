@@ -25,7 +25,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     prisma.semester.findFirst({ where: { userId, isActive: true }, select: { id: true, name: true, academicYear: true }, orderBy: { updatedAt: "desc" } }),
     prisma.deadline.findMany({
       where: { userId, dueAt: { gte: queryStart, lt: queryEnd } },
-      select: { id: true, title: true, type: true, dueAt: true, status: true, module: { select: { name: true, code: true, colour: true, semesterId: true } } },
+      select: { id: true, title: true, type: true, dueAt: true, status: true, examLocation: true, module: { select: { name: true, code: true, colour: true, semesterId: true } } },
       orderBy: { dueAt: "asc" },
     }),
     prisma.timetableEvent.findMany({ where: { userId, status: { not: "CANCELLED" }, startAt: { gte: queryStart, lt: queryEnd } }, select: { id: true, title: true, location: true, startAt: true, endAt: true, allDay: true }, orderBy: { startAt: "asc" } }),

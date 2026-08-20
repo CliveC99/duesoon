@@ -20,7 +20,7 @@ function logSyncFailure(sourceId: string, failure: ClassifiedFailure) {
   console.warn("[DueSoon timetable sync]", { sourceId, code: failure.code, ...(failure.detail ? { detail: failure.detail } : {}) });
 }
 
-export async function syncTimetableSource(sourceId: string, userId: string): Promise<TimetableSyncResult> {
+export async function syncTimetableSource(sourceId: string, userId: string, options: { logFailure?: boolean } = {}): Promise<TimetableSyncResult> {
   const source = await prisma.timetableSource.findFirst({ where: { id: sourceId, userId } });
   if (!source) return { success: false, error: "Timetable connection not found" };
   await prisma.timetableSource.updateMany({ where: { id: sourceId, userId }, data: { lastSyncStatus: "SYNCING", lastSyncErrorSafe: null } });
@@ -55,7 +55,7 @@ export async function syncTimetableSource(sourceId: string, userId: string): Pro
     return { success: true, eventCount: events.length };
   } catch (error) {
     const failure = classifySyncFailure(error);
-    logSyncFailure(sourceId, failure);
+    if (options.logFailure !== false) logSyncFailure(sourceId, failure);
     await prisma.timetableSource.updateMany({ where: { id: sourceId, userId }, data: { lastSyncStatus: "FAILED", lastSyncErrorSafe: failure.safeMessage } });
     return { success: false, error: failure.safeMessage };
   }

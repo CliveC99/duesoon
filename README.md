@@ -62,6 +62,7 @@ The production Compose stack is intended for a single Linux Mini PC. It contains
 - `duesoon-app`: the non-root Next.js standalone server, published only on host loopback.
 - `duesoon-db`: PostgreSQL 17, reachable only on the Compose network and backed by the `duesoon-db-data` named volume.
 - `duesoon-migrate`: a one-shot container that runs `prisma migrate deploy` after PostgreSQL becomes healthy. The app starts only after it succeeds.
+- `duesoon-timetable-sync`: a profile-gated, one-shot container that refreshes every connected timetable and exits without publishing a port.
 
 Local Windows development remains unchanged: continue using your locally installed Node.js and PostgreSQL with `npm run dev`. Docker is only the production deployment path.
 
@@ -105,6 +106,33 @@ docker compose logs --tail=100 duesoon-app
 docker compose logs --tail=100 duesoon-db
 ```
 
+### Automatic timetable syncing
+
+The automatic command finds every connected timetable source and invokes the same protected server-side sync path as the manual **Sync now** action. Sources are processed sequentially to avoid bursts against timetable providers. A failed feed is recorded with the existing safe status fields, does not stop later sources, and does not remove that source's previously synced events. Output contains aggregate counts only.
+
+Run it locally with the current `DATABASE_URL` and `TIMETABLE_ENCRYPTION_KEY` environment configuration:
+
+```bash
+npm run timetable:sync
+```
+
+In production, build the one-shot image during deployment and test it once:
+
+```bash
+docker compose build duesoon-timetable-sync
+docker compose run --rm duesoon-timetable-sync
+```
+
+Install this host cron entry with `crontab -e` to run it every three hours (replace the directory if the checkout lives elsewhere):
+
+```cron
+0 */3 * * * cd /home/clive/duesoon && /usr/bin/docker compose run --rm duesoon-timetable-sync 2>&1 | /usr/bin/logger -t duesoon-timetable-sync
+```
+
+Inspect recent automatic-sync output with `journalctl -t duesoon-timetable-sync --since today`. The command reports only source counts; it never prints feed URLs, user emails, credentials, or timetable content. To disable automatic syncing, remove or comment out that cron line. Manual **Sync now** remains available regardless of the cron configuration.
+
+Overlapping automatic runs are prevented with a PostgreSQL advisory lock held for the lifetime of the job. A second invocation exits safely without processing sources. PostgreSQL releases the lock if the process or container terminates, so no stale lock or schema field is required.
+
 ### Reverse proxy and HTTPS
 
 Keep the app bound to `127.0.0.1:3000` (or the loopback port selected with `DUESOON_PORT`) and place Caddy, Nginx, or another maintained reverse proxy in front of it. The proxy should:
@@ -130,7 +158,7 @@ Back up the database first. Then fetch the reviewed application changes and run:
 
 ```bash
 docker compose stop duesoon-app
-docker compose build duesoon-app duesoon-migrate
+docker compose build duesoon-app duesoon-migrate duesoon-timetable-sync
 docker compose run --rm duesoon-migrate
 docker compose up -d --no-deps duesoon-app
 docker compose ps

@@ -69,6 +69,27 @@ services:
     networks:
       - duesoon-internal
 
+  duesoon-timetable-sync:
+    build:
+      context: .
+      target: timetable-syncer
+    profiles: ["tasks"]
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      TIMETABLE_ENCRYPTION_KEY: ${TIMETABLE_ENCRYPTION_KEY:?Set TIMETABLE_ENCRYPTION_KEY in .env}
+    depends_on:
+      duesoon-db:
+        condition: service_healthy
+      duesoon-migrate:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - duesoon-internal
+
 volumes:
   duesoon-db-data:
 

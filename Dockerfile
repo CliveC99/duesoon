@@ -17,6 +17,11 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
+FROM builder AS timetable-syncer
+ENV NODE_ENV=production
+USER node
+CMD ["node", "--conditions=react-server", "--import", "tsx", "scripts/sync-timetables.ts"]
+
 FROM base AS migrator
 ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
